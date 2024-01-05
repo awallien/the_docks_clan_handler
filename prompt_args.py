@@ -1,6 +1,7 @@
 import shlex
 
 from argparse import ArgumentParser
+from logger import debug_set_enable, debug_print
 
 
 class PromptArgsResponse:
@@ -59,6 +60,7 @@ class PromptRunner:
 
         self.prompt_cmds["help"] = PromptArgs("help", self.prompt_help_call, "Prints list of commands and their description")
         self.prompt_cmds[quit_cmd] = PromptArgs(quit_cmd, self.prompt_quit_call, "Ends program")
+        self.prompt_cmds["debug"] = PromptArgs("debug", self.prompt_debug_enable, "Enable/Disable debug", opt_no_arg_params=["on", "off"])
 
     @default_response_ok
     def prompt_quit_call(self, _):
@@ -68,6 +70,13 @@ class PromptRunner:
     def prompt_help_call(self, _):
         for cmd in self.prompt_cmds.values():
             cmd.print_help()
+
+    @default_response_ok
+    def prompt_debug_enable(self, args):
+        on = args.on
+        off = args.off
+        debug_set_enable(True if on else False if off else False)
+        debug_print(f"Debug is turned on")
 
     def run(self):
         print(self.banner)
