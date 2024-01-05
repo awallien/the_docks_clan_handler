@@ -21,22 +21,21 @@ def default_response_ok(func):
     return inner
 
 class PromptArgs:
-
-    KV_DELIM = "="
-
-    def __init__(self, arg_name, cb, desc="", req_params = [], opt_params = []):
+    def __init__(self, arg_name, cb, desc="", req_params = [], opt_params = [], opt_no_arg_params=[]):
         self.arg_name = arg_name
         self.cb = cb
         self.desc = desc
         self.arg_parser = ArgumentParser(prog=arg_name, description=desc, allow_abbrev=False)
-        self.__init_arg_parser(req_params, opt_params)
+        self.__init_arg_parser(req_params, opt_params, opt_no_arg_params)
 
-    def __init_arg_parser(self, req_params, opt_params):
+    def __init_arg_parser(self, req_params, opt_params, opt_no_arg_params):
         for param in req_params:
             self.arg_parser.add_argument(param)
         for param in opt_params:
             self.arg_parser.add_argument("--"+param)
-
+        for param in opt_no_arg_params:
+            self.arg_parser.add_argument("--"+param, action="store_true", default=False)
+        
     def print_help(self):
         print(self.arg_name, " "*(15-len(self.arg_name)), self.desc)
         

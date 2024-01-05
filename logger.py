@@ -19,7 +19,11 @@ class Logger:
         if self.enable:
             print(Fore.GREEN + msg)
 
+    def err_print(self, msg):
+        print(Fore.RED + msg)
+
 
 _logger = Logger()
 debug_set_enable = lambda x: _logger.set_enable(x)
 debug_print = lambda msg: _logger.debug_print(msg)
+err_print = lambda msg: _logger.err_print(msg)

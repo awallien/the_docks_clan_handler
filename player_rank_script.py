@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import heapq
 import pandas as pd
 import pathlib
@@ -6,16 +6,20 @@ import pathlib
 from osrs_api import Hiscores, const
 from prompt_args import *
 from argparse import ArgumentParser
-from logger import debug_set_enable, debug_print
+from logger import debug_set_enable, debug_print, err_print
 
 class PlayerHandler:
+    """Handles Rank Calculations for a clan member"""
 
     CMB_SKILLS = ['attack', 'defence', 'strength', 'magic', 'ranged']
     MELEE_CMB_SKILLS = ['attack', 'defence', 'strength']
-    NEW_PLAYER_RANKS = [1,2]
-    ACTIVENESS_RANKS = [3,4]
-    ACHIEVEMENT_RANKS = [5,6,7,8,9,10]
-    HONOR_RANKS = [11,12,13,14]
+    NEW_PLAYER_RANKS = [1, 2]
+    ACTIVENESS_RANK_3 = 3
+    ACTIVENESS_RANK_4 = 4
+    ACTIVENESS_RANKS = [ACTIVENESS_RANK_3, ACTIVENESS_RANK_4]
+    ACHIEVEMENT_RANK_10 = 10
+    ACHIEVEMENT_RANKS = [5, 6, 7, 8, 9, ACHIEVEMENT_RANK_10]
+    HONOR_RANKS = [11, 12, 13, 14]
 
     def __init__(self, player) -> None:
         assert(isinstance(player, Hiscores))
@@ -58,14 +62,34 @@ class PlayerHandler:
 
 
 class ClanDatabase:
-    
+    """Handles a clan members' info in a database"""
+
     cache_db_file = str(pathlib.Path(__file__).parent.absolute()) + "/cache/cache_db.csv"
+    ONE_MONTH_ACTIVE = 3
+    
+    # member's username
     MEMBER = "Member"
+    
+    # member's rank
     RANK = "Rank"
+    
+    # date that member joined the clan
     JOINED = "Joined"
+    
+    # if any, for alt accounts, the original account to a member 
     PARENT = "Parent"
-    ACTIVE = "Active"
+    
+    # for members in rank [1..4], are they active in clan? (i.e. total xp is increasing)
+    ACTIVE_CNT = "Active Count"
+    
+    # member's total xp
     TOTAL_XP = "Total XP"
+
+    # last date that a member is promoted
+    LAST_RANKED_DATE = "Last Rank Date"
+
+    RANK_CHLG_ATTEMPTS = "Rank Challenge Attempts"
+    NEXT_RANK_CHLG_DATE = "Next Rank Challenge Date"
 
     def __init__(self, data_file=None, mode_chr="w") -> None:
         self.db : pd.DataFrame = None
@@ -75,8 +99,9 @@ class ClanDatabase:
             self.RANK,
             self.JOINED,
             self.PARENT,
-            self.ACTIVE,
-            self.TOTAL_XP
+            self.ACTIVE_CNT,
+            self.TOTAL_XP,
+            self.LAST_RANKED_DATE
         ]
         self.__init_db(data_file)
     
@@ -159,7 +184,7 @@ class ClanDatabase:
         
         return RESPONSE_OK
 
-    def update_player(self, player, new_name=None, new_rank=None, total_xp=None):
+    def update_player(self, player, new_name=None, new_rank=None, total_xp=None, new_parent=None, active_cnt=None):
         if player not in self.db[self.MEMBER].values:
             return RESPONSE_ERR(f"Player name {player} does not exist in clan")
         
@@ -167,8 +192,16 @@ class ClanDatabase:
             self.db.loc[self.db.Member == player, self.MEMBER] = new_name
         if new_rank:
             self.db.loc[self.db.Member == player, self.RANK] = new_rank
+            self.db.loc[self.db.Member == player, self.LAST_RANKED_DATE] = datetime.now().strftime("%d-%b-%Y")
         if total_xp:
             self.db.loc[self.db.Member == player, self.TOTAL_XP] = total_xp
+        if new_parent:
+            self.db.loc[self.db.Member == player, self.PARENT] = new_parent
+        if not (active_cnt is None):
+            if active_cnt == 0:
+                self.db.loc[self.db.Member == player, self.ACTIVE_CNT] = 0
+            else:
+                self.db.loc[self.db.Member == player, self.ACTIVE_CNT] += 1 
         
         debug_print(f"Update {player}: {self.db.loc[self.db.Member == player].to_string(header=False, index=False)}")
         
@@ -187,14 +220,26 @@ class ClanDatabase:
             return []
         return self.db[self.MEMBER].values
 
-    def get_data(self, player, column):
-        return self.db[self.db.Member == player, column]
+    def get_all_data(self, player):
+        if player not in self.db[self.MEMBER].values:
+            return None
+        return self.db[self.db.Member == player].to_dict('records')[0]
+    
+    def dump(self, rank=None, player=None):
+        if rank:
+            print(self.db[self.db[self.RANK] == rank])
+        elif player:
+            if player not in self.db[self.MEMBER].values:
+                return RESPONSE_ERR(f"Player {player} does not exist in clan")
+            print(self.db[self.db.Member == player])
+        else:
+            print(self.db.to_string())
 
-    def dump(self):
-        print(self.db.to_string())
-
+        return RESPONSE_OK
 
 class ClanRankScriptHandler(PromptRunner):
+    """Handles user's commands"""
+
     def __init__(self, clan_db):
         if clan_db == None:
             raise ValueError("Clan DB must be of type ClanDatabase and must NOT be None")
@@ -203,24 +248,33 @@ class ClanRankScriptHandler(PromptRunner):
         self.banner = "The Docks Rank Script v1.0"
         self.cmds = {
             "addplayer": PromptArgs("addplayer", self.cb_add_player, "add new player to db", ["player"], ["joined", "parent"]),
-            "updateplayer": PromptArgs("updateplayer", self.cb_update_player, "update player's info in db", ["player"], ["name", "rank"]),
+            "updateplayer": PromptArgs("updateplayer", self.cb_update_player, "update player's info in db", ["player"], ["name", "rank", "parent"]),
             "deleteplayer": PromptArgs("deleteplayer", self.cb_delete_player, "delete player from db", ["player"]),
             "appendfiledb": PromptArgs("appendfiledb", self.cb_append_db, "append new data from file to cache db", ["file"]),
             "savedb": PromptArgs("savedb", self.cb_save_db, "save cache db to cache file"),
             "downloaddb": PromptArgs("downloaddb", self.cb_download, "download db to csv file", ["file"]),
-            "updatedb": PromptArgs("updatedbxp", self.cb_update_db, "update all players' info in db"),
-            "dumpdb": PromptArgs("dumpdb", self.cb_dump_db, "dump cache db")
+            "updatedb": PromptArgs("updatedb", self.cb_update_db, "update all players' info in db"),
+            "dumpdb": PromptArgs("dumpdb", self.cb_dump_db, "dump cache db", opt_params=["rank"]),
+            "dumpplayer": PromptArgs("dumpplayer", self.cb_dump_player, "dump one player in db", ["player"])
         }
 
         super().__init__(self.cmds, banner=self.banner)
 
     @staticmethod
-    def player_hiscore_get(p_name):
+    def __player_hiscore_get(player):
         try:
-            p_hiscore = Hiscores(p_name, const.AccountType.NORMAL)
+            p_hiscore = Hiscores(player, const.AccountType.NORMAL)
             return p_hiscore
         except Exception as e:
+            debug_print
             return None
+    
+    @staticmethod
+    def __get_total_xp(player_hiscore):
+        total_xp = -1
+        if player_hiscore and player_hiscore.total_xp:
+            total_xp = player_hiscore.total_xp
+        return total_xp
 
     def cb_add_player(self, args):
         player = args.player
@@ -228,7 +282,7 @@ class ClanRankScriptHandler(PromptRunner):
         parent = args.parent
         rank = 1
         
-        player_hiscore = self.player_hiscore_get(player)
+        player_hiscore = self.__player_hiscore_get(player)
         total_xp = -1
         if not player_hiscore:
             debug_print("Player not found in hiscore db, just add to cache db with Rank 1")
@@ -243,15 +297,21 @@ class ClanRankScriptHandler(PromptRunner):
         player = args.player
         new_name = args.name
         rank = args.rank
-        return self.clan_db.update_player(player, new_name, rank)
+        parent = args.parent
+        return self.clan_db.update_player(player, new_name=new_name, new_rank=rank, new_parent=parent)
 
     def cb_delete_player(self, args):
         player = args.player
         return self.clan_db.delete_player(player)
 
     @default_response_ok
-    def cb_dump_db(self, _):
-        self.clan_db.dump()
+    def cb_dump_db(self, args):
+        rank = args.rank
+        self.clan_db.dump(rank=rank)
+
+    def cb_dump_player(self, args):
+        player = args.player
+        return self.clan_db.dump(player=player)
 
     def cb_save_db(self, _):
         res = self.clan_db.save_to_cache()
@@ -267,23 +327,84 @@ class ClanRankScriptHandler(PromptRunner):
         res = self.clan_db.write_to_file(write_file)
         return res
     
-    def __cb_update_db_total_xp(self, player):
-        total_xp = -1
-        hiscore = self.player_hiscore_get(player)
-        if hiscore and hiscore.total_xp:
-            total_xp = hiscore.total_xp
-        self.clan_db.update_player(player, total_xp=total_xp)
-        return RESPONSE_OK
-    
-    def __cb_update_db_rank(self, player):
-        pass
+    def __cb_update_db_rank(self, player, player_hiscore, player_db_data):
+        """
+        player = get player
+        if player::rank in [1,2] and active for one month:
+            player::rank = 3
+        elif player::rank in [3] and active for one month:
+            player::rank = 4
+        elif player::rank in [4] and active for one month:
+            player::rank = get updated rank(player) -> [5...10]
+        elif player::rank in [5-9] and after update:
+            player::rank = get updated(rank player) -> player::rank + 1
+        """
+        player_rank = player_db_data[ClanDatabase.RANK]
+        player_is_active = (player_db_data[ClanDatabase.ACTIVE_CNT] == ClanDatabase.ONE_MONTH_ACTIVE)
+        new_rank = 0
+        
+        if player_rank in PlayerHandler.NEW_PLAYER_RANKS:
+            if player_is_active:
+                new_rank = PlayerHandler.ACTIVENESS_RANK_3
+        elif player_rank in PlayerHandler.ACTIVENESS_RANK_3:
+            if player_is_active:
+                new_rank = PlayerHandler.ACTIVENESS_RANK_4
+        elif player_rank in PlayerHandler.ACTIVENESS_RANK_4 or \
+             player_rank in PlayerHandler.ACHIEVEMENT_RANKS:
+            player_info = PlayerHandler(player_hiscore).get_max_levels_info()
+            debug_print(player_info)
+            new_rank = player_info["rank"]
+        else:
+            return RESPONSE_OK
+        
+        if new_rank > player_rank:
+            print(f"   Player {player} is promoted from rank {player_rank} to {new_rank}")
+        
+        return self.clan_db.update_player(player, new_rank=new_rank)
 
+    def __cb_update_player_active_xp(self, player, player_hiscore, player_db_data):
+        """
+        if player::rank in [1,2,3,4]:
+         let total_xp = hiscore::total_xp
+        if total_xp > db::total_xp:
+         set active_cnt to 1
+        else:
+         set active_cnt to 0
+        update db with active_cnt and/or total_xp
+        """
+        player_rank = player_db_data[ClanDatabase.RANK]
+        player_total_xp = self.__get_total_xp(player_hiscore)
+        db_total_xp = player_db_data[ClanDatabase.TOTAL_XP]
+        status = RESPONSE_OK
+
+        if player_rank in PlayerHandler.NEW_PLAYER_RANKS or player_rank in PlayerHandler.ACTIVENESS_RANKS:
+            active_cnt = 0
+            if player_total_xp > db_total_xp:
+                active_cnt = 1
+        
+            status = self.clan_db.update_player(player, active_cnt=active_cnt, total_xp=player_total_xp)
+        else:
+            status = self.clan_db.update_player(player, total_xp=player_total_xp)
+
+        return status
+        
 
     def cb_update_db(self, _):
         update_cbs = [
-            self.__cb_update_db_total_xp,
-
+            self.__cb_update_player_active_xp,
+            self.__cb_update_db_rank
         ]
+
+        for member in self.clan_db.get_members():
+            member_hiscore = self.__player_hiscore_get(member)
+            member_db_data = self.clan_db.get_all_data(member)
+            
+            for update_cb in update_cbs:
+                status = update_cb(member, member_hiscore, member_db_data)
+                if not status.res:
+                    return status
+
+        return RESPONSE_OK
 
 if __name__ == "__main__":
     parser = ArgumentParser(
@@ -319,8 +440,3 @@ if __name__ == "__main__":
         handler.run()
     except EOFError and KeyboardInterrupt:
         exit(0)
-
-
-
-    
-    
