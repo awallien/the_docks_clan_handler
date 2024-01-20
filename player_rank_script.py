@@ -316,7 +316,7 @@ class ClanRankScriptHandler(PromptRunner):
         new_name = args.name
         rank = args.rank
         parent = args.parent
-        active_cnt = ast.literal_eval(args.active_cnt)
+        active_cnt = True if str(args.active_cnt).lower() not in ["false", ""] else False
         return self.clan_db.update_player(player, new_name=new_name, new_rank=rank, new_parent=parent, active_cnt=active_cnt)
 
     def cb_delete_player(self, args):
@@ -360,7 +360,7 @@ class ClanRankScriptHandler(PromptRunner):
         """
         player_rank = player_db_data[ClanDatabase.RANK]
         player_active_cnt = player_db_data[ClanDatabase.ACTIVE_CNT]
-        player_is_active = (player_active_cnt == ClanDatabase.ONE_MONTH_ACTIVE)
+        player_is_active = (int(player_active_cnt) > ClanDatabase.ONE_MONTH_ACTIVE)
         new_rank = 0
         status = RESPONSE_OK
         
