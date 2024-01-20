@@ -1,5 +1,6 @@
 from datetime import datetime
 import heapq
+import ast
 import numpy as np
 import pandas as pd
 import pathlib
@@ -215,10 +216,10 @@ class ClanDatabase:
         if new_parent:
             self.db.loc[self.db.Member == player, self.PARENT] = new_parent
         if not (active_cnt is None):
-            if active_cnt == 0:
-                self.db.loc[self.db.Member == player, self.ACTIVE_CNT] = 0
+            if active_cnt:
+                self.db.loc[self.db.Member == player, self.ACTIVE_CNT] += 1
             else:
-                self.db.loc[self.db.Member == player, self.ACTIVE_CNT] += 1 
+                self.db.loc[self.db.Member == player, self.ACTIVE_CNT] = 0 
         
         debug_print(f"Update {player}: {self.db.loc[self.db.Member == player].to_string(header=False, index=False)}")
         
@@ -265,7 +266,7 @@ class ClanRankScriptHandler(PromptRunner):
         self.banner = "The Docks Rank Script v1.0"
         self.cmds = {
             "addplayer": PromptArgs("addplayer", self.cb_add_player, "add new player to db", ["player"], ["joined", "parent"]),
-            "updateplayer": PromptArgs("updateplayer", self.cb_update_player, "update player's info in db", ["player"], ["name", "rank", "parent"]),
+            "updateplayer": PromptArgs("updateplayer", self.cb_update_player, "update player's info in db", ["player"], ["name", "rank", "parent", "active_cnt"]),
             "deleteplayer": PromptArgs("deleteplayer", self.cb_delete_player, "delete player from db", ["player"]),
             "appendfiledb": PromptArgs("appendfiledb", self.cb_append_db, "append new data from file to cache db", ["file"]),
             "savedb": PromptArgs("savedb", self.cb_save_db, "save cache db to cache file"),
@@ -315,7 +316,8 @@ class ClanRankScriptHandler(PromptRunner):
         new_name = args.name
         rank = args.rank
         parent = args.parent
-        return self.clan_db.update_player(player, new_name=new_name, new_rank=rank, new_parent=parent)
+        active_cnt = ast.literal_eval(args.active_cnt)
+        return self.clan_db.update_player(player, new_name=new_name, new_rank=rank, new_parent=parent, active_cnt=active_cnt)
 
     def cb_delete_player(self, args):
         player = args.player
@@ -369,23 +371,25 @@ class ClanRankScriptHandler(PromptRunner):
         if player_rank in PlayerHandler.NEW_PLAYER_RANKS:
             if player_is_active:
                 new_rank = PlayerHandler.ACTIVENESS_RANK_3
-                player_active_cnt = 0
+                player_active_cnt = False
+                return self.clan_db.update_player(player, new_rank=new_rank, active_cnt=player_active_cnt)
         elif player_rank == PlayerHandler.ACTIVENESS_RANK_3:
             if player_is_active:
                 new_rank = PlayerHandler.ACTIVENESS_RANK_4
-                player_active_cnt = 0
+                player_active_cnt = False
+                return self.clan_db.update_player(player, new_rank=new_rank, active_cnt=player_active_cnt)
         elif (player_rank == PlayerHandler.ACTIVENESS_RANK_4 and player_is_active) or \
              player_rank in PlayerHandler.ACHIEVEMENT_RANKS:
             player_info = PlayerHandler(player_hiscore).get_max_levels_info()
             debug_print(str(player_info))
             new_rank = player_info["rank"]
-        else:
-            return RESPONSE_OK
+            player_active_cnt = False
+            return self.clan_db.update_player(player, new_rank=new_rank, active_cnt=player_active_cnt)
         
         if new_rank > player_rank:
             print(f"   Player {player} is promoted from rank {player_rank} to {new_rank}")
         
-        return self.clan_db.update_player(player, new_rank=new_rank, active_cnt=player_active_cnt)
+        return RESPONSE_OK
 
     def __cb_update_player_active_xp(self, player, player_hiscore, player_db_data):
         """
@@ -408,16 +412,16 @@ class ClanRankScriptHandler(PromptRunner):
             return RESPONSE_OK
 
         if player_rank in PlayerHandler.NEW_PLAYER_RANKS or player_rank in PlayerHandler.ACTIVENESS_RANKS:
-            active_cnt = 0
+            active_cnt = False
             if player_total_xp > db_total_xp:
-                active_cnt = 1
+                active_cnt = True
                 debug_print(f"{player} total xp: {player_total_xp} > db total xp: {db_total_xp}, active count set to 1")
             else:
                 debug_print(f"{player} : no change in total xp, set active count to 0")
         
             status = self.clan_db.update_player(player, active_cnt=active_cnt, total_xp=player_total_xp)
         else:
-            status = self.clan_db.update_player(player, total_xp=player_total_xp, active_cnt=ClanDatabase.ONE_MONTH_ACTIVE)
+            status = self.clan_db.update_player(player, total_xp=player_total_xp, active_cnt=True)
 
         return status
         
