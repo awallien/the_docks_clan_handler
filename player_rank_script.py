@@ -362,35 +362,35 @@ class ClanRankScriptHandler(PromptRunner):
         player_active_cnt = player_db_data[ClanDatabase.ACTIVE_CNT]
         player_is_active = (player_active_cnt == ClanDatabase.ONE_MONTH_ACTIVE)
         new_rank = 0
+        status = RESPONSE_OK
         
         if player_rank.isnumeric():
             player_rank = int(player_rank)
         else:
-            return RESPONSE_OK
+            return status
 
         if player_rank in PlayerHandler.NEW_PLAYER_RANKS:
             if player_is_active:
                 new_rank = PlayerHandler.ACTIVENESS_RANK_3
                 player_active_cnt = False
-                return self.clan_db.update_player(player, new_rank=new_rank, active_cnt=player_active_cnt)
+                status = self.clan_db.update_player(player, new_rank=new_rank, active_cnt=player_active_cnt)
         elif player_rank == PlayerHandler.ACTIVENESS_RANK_3:
             if player_is_active:
                 new_rank = PlayerHandler.ACTIVENESS_RANK_4
                 player_active_cnt = False
-                return self.clan_db.update_player(player, new_rank=new_rank, active_cnt=player_active_cnt)
+                status = self.clan_db.update_player(player, new_rank=new_rank, active_cnt=player_active_cnt)
         elif (player_rank == PlayerHandler.ACTIVENESS_RANK_4 and player_is_active) or \
              player_rank in PlayerHandler.ACHIEVEMENT_RANKS:
             player_info = PlayerHandler(player_hiscore).get_max_levels_info()
             debug_print(str(player_info))
             new_rank = player_info["rank"]
             player_active_cnt = False
-        else:
-            return RESPONSE_OK
+            status = self.clan_db.update_player(player, new_rank=new_rank, active_cnt=player_active_cnt)
         
-        if new_rank > player_rank:
+        if status.res and new_rank > player_rank:
             print(f"   Player {player} is promoted from rank {player_rank} to {new_rank}")
         
-        return self.clan_db.update_player(player, new_rank=new_rank, active_cnt=player_active_cnt)
+        return status
 
     def __cb_update_player_active_xp(self, player, player_hiscore, player_db_data):
         """
