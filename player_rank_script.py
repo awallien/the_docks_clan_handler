@@ -436,6 +436,9 @@ class ClanRankScriptHandler(PromptRunner):
         for member in self.clan_db.get_members():
             member_hiscore = self.__player_hiscore_get(member)
             member_db_data = self.clan_db.get_all_data(member)
+
+            if member_hiscore is None:
+                err_print(f"!!! No hiscore found for {member}, skip update")
             
             for update_cb in update_cbs:
                 status = update_cb(member, member_hiscore, member_db_data)
