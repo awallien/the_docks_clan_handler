@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 from logger import debug_set_enable, debug_print, err_print
 from clan_database import *
 
-class PlayerHandler:
+class PlayerRankHandler:
     """Handles Rank Calculations for a clan member"""
 
     CMB_SKILLS = ['attack', 'defence', 'strength', 'magic', 'ranged']
@@ -18,6 +18,7 @@ class PlayerHandler:
     ACHIEVEMENT_RANK_10 = 10
     ACHIEVEMENT_RANKS = [5, 6, 7, 8, 9, ACHIEVEMENT_RANK_10]
     HONOR_RANKS = [11, 12, 13, 14]
+    MOD_RANKS = ["A","D","O"]
 
     def __init__(self, player) -> None:
         assert(isinstance(player, Hiscores))
@@ -25,7 +26,7 @@ class PlayerHandler:
 
     def get_new_player_rank(self):
         max_levels_info = self.get_max_levels_info()
-        if max_levels_info["rank"] >= 7:
+        if max_levels_info["rank"] >= 9:
             return 2
         return 1
         
@@ -57,6 +58,15 @@ class PlayerHandler:
     @staticmethod
     def calc_avg(*args): 
         return sum(args)//len(args)
+    
+    @classmethod
+    def player_hiscore_get(cls, player):
+        try:
+            p_hiscore = Hiscores(player, const.AccountType.NORMAL)
+            return p_hiscore
+        except Exception as e:
+            debug_print
+            return None
 
 
 class ClanRankScriptHandler(PromptRunner):
@@ -82,15 +92,6 @@ class ClanRankScriptHandler(PromptRunner):
         }
 
         super().__init__(self.cmds, banner=self.banner)
-
-    @staticmethod
-    def __player_hiscore_get(player):
-        try:
-            p_hiscore = Hiscores(player, const.AccountType.NORMAL)
-            return p_hiscore
-        except Exception as e:
-            debug_print
-            return None
     
     @staticmethod
     def __get_total_xp(player_hiscore):
@@ -105,11 +106,11 @@ class ClanRankScriptHandler(PromptRunner):
         parent = args.parent
         rank = 1
         
-        player_hiscore = self.__player_hiscore_get(player)
+        player_hiscore = PlayerRankHandler.player_hiscore_get(player)
         if not player_hiscore:
             debug_print("Player not found in hiscore db, just add to cache db with Rank 1")
         else:
-            player_info = PlayerHandler(player_hiscore)
+            player_info = PlayerRankHandler(player_hiscore)
             rank = player_info.get_new_player_rank()
 
         return self.clan_db.add_new_player(player, rank, joined_date, parent, total_xp=-1)
@@ -156,15 +157,20 @@ class ClanRankScriptHandler(PromptRunner):
             self.__cb_update_player_active_xp,
             self.__cb_update_db_rank
         ]
+        
 
-        player_hiscore = self.__player_hiscore_get(player)
+        player_hiscore = PlayerRankHandler.player_hiscore_get(player)
         if not player_hiscore:
             err_print(f"!!! No hiscore found for {player}, skip update")
             return RESPONSE_OK
 
         for update_fn in update_fns:
             player_db_data = self.clan_db.get_player_data(player)
+            if player_db_data is None:
+                return RESPONSE_ERR(f"Player {player} not found in clan db")
+            
             status = update_fn(player, player_hiscore, player_db_data)
+            
             if not status.res:
                 return status
                 
@@ -193,17 +199,17 @@ class ClanRankScriptHandler(PromptRunner):
         else:
             return status
 
-        if player_rank in PlayerHandler.NEW_PLAYER_RANKS:
+        if player_rank in PlayerRankHandler.NEW_PLAYER_RANKS:
             if player_is_active:
-                new_rank = PlayerHandler.ACTIVENESS_RANK_3
+                new_rank = PlayerRankHandler.ACTIVENESS_RANK_3
                 status = self.clan_db.update_player(player, new_rank=new_rank, active_cnt=False)
-        elif player_rank == PlayerHandler.ACTIVENESS_RANK_3:
+        elif player_rank == PlayerRankHandler.ACTIVENESS_RANK_3:
             if player_is_active:
-                new_rank = PlayerHandler.ACTIVENESS_RANK_4
+                new_rank = PlayerRankHandler.ACTIVENESS_RANK_4
                 status = self.clan_db.update_player(player, new_rank=new_rank, active_cnt=False)
-        elif (player_rank == PlayerHandler.ACTIVENESS_RANK_4 and player_is_active) or \
-             player_rank in PlayerHandler.ACHIEVEMENT_RANKS:
-            player_info = PlayerHandler(player_hiscore).get_max_levels_info()
+        elif (player_rank == PlayerRankHandler.ACTIVENESS_RANK_4 and player_is_active) or \
+             player_rank in PlayerRankHandler.ACHIEVEMENT_RANKS:
+            player_info = PlayerRankHandler(player_hiscore).get_max_levels_info()
             debug_print(str(player_info))
             new_rank = player_info["rank"]
             status = self.clan_db.update_player(player, new_rank=new_rank, active_cnt=False)
@@ -233,7 +239,7 @@ class ClanRankScriptHandler(PromptRunner):
         else:
             return RESPONSE_OK
 
-        if player_rank in PlayerHandler.NEW_PLAYER_RANKS or player_rank in PlayerHandler.ACTIVENESS_RANKS:
+        if player_rank in PlayerRankHandler.NEW_PLAYER_RANKS or player_rank in PlayerRankHandler.ACTIVENESS_RANKS:
             active_cnt = False
             if player_total_xp > db_total_xp:
                 active_cnt = True
@@ -255,7 +261,7 @@ class ClanRankScriptHandler(PromptRunner):
         ]
 
         for member in self.clan_db.get_members():
-            member_hiscore = self.__player_hiscore_get(member)
+            member_hiscore = PlayerRankHandler.player_hiscore_get(member)
             member_db_data = self.clan_db.get_player_data(member)
 
             if member_hiscore is None:
