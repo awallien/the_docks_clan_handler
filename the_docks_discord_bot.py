@@ -174,19 +174,20 @@ class TheDocksDiscordBot(commands.Bot):
         super().__init__(self.cmd_prefix, intents=intents)
 
     async def on_ready(self):
-        guild = dutils.get(self.guilds, name=self.guild_type)
-        self.mod = dutils.get(guild.members, name=os.getenv("BOT_OWNER"))
+        self.guild = dutils.get(self.guilds, name=self.guild_type)
+        self.mod = dutils.get(self.guild.members, name=os.getenv("BOT_OWNER"))
         debug_print(f"{self.user} has connected to Discord!")
-        if guild and self.mod:
-            debug_print(f"'{self.user}' is connected to Guild(id:{guild.id})")
+        if self.guild and self.mod:
+            debug_print(f"'{self.user}' is connected to Guild(id:{self.guild.id})")
         else:
             self.close()
-            if not guild:
+            if not self.guild:
                 raise ClientException(f"{self.user} is not connected to designated guild!")
             else:
                 raise ClientException(f"Bot owner {self.mod} is not found!")
 
         await self.add_cog(TheDocksDiscordBotCog(self, self.db__))
+
 
     def run(self):
         super().run(self.TOKEN)
