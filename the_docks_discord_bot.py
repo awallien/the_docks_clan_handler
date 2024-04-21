@@ -130,10 +130,9 @@ async def opt_player_autocompletion(_, current):
     ]
 
 
-valid_days = ["30", "60", "90", "180"]
-
+valid_days = [30, 60, 90, 180]
 @docks.command(name="drops")
-async def drops(ctx, days="30"):
+async def drops(ctx, days=30):
     def get_drop_embed_info(embed: Embed):
         info = type("info", (), {"player":"N/A", "item":"N/A", "value":0})()
         info.player = embed.author.name
@@ -157,7 +156,6 @@ async def drops(ctx, days="30"):
         await ctx.send(f"Error: invalid input for days ({days})")
         return
 
-    days = int(days)
     dtime_days = (datetime.now() - timedelta(days=days)).replace(tzinfo=timezone.utc)
     players_drops = dict() # {K:name, V:{"Total GE Value":<int> "MVI":{"item":<string>, "value":<int>}}
     message_cnt = 1
@@ -170,13 +168,14 @@ async def drops(ctx, days="30"):
                 for embed in message.embeds: # There should only be one embed, but looping over all embeds just in case
                     info = get_drop_embed_info(embed)
                     debug_print(f"{info.player}, {info.item}, {info.value}")
-                    player_drops_info = players_drops.get(info.player, None)                    
+                    info.player = ["metaGoose", "metaHorse", "Noob"][message_cnt % 3]
+                    player_drops_info = players_drops.get(info.player, None)
                     if player_drops_info is None:
-                        players_drops[info.player] = {"Total GE Value": 0, "MVI":{"item": "", "value":0}}
+                        players_drops[info.player] = {"Total GP": 0, "MVD":{"item": "", "value":0}}
                         player_drops_info = players_drops[info.player]
 
-                    player_drops_info["Total GE Value"] += info.value
-                    player_drops_info_mvi = player_drops_info["MVI"]
+                    player_drops_info["Total GP"] += info.value
+                    player_drops_info_mvi = player_drops_info["MVD"]
                     if info.value > player_drops_info_mvi["value"]:
                         player_drops_info_mvi["value"] = info.value
                         player_drops_info_mvi["item"] = info.item
@@ -187,9 +186,10 @@ async def drops(ctx, days="30"):
 
 @drops.autocomplete("days")
 async def days_drops_autocompletion(_, current):
+    valid_days_str_list = list(map(str, valid_days))
     return [
         app_commands.Choice(name=day, value=day)
-        for day in valid_days if current.lower() in day.lower()
+        for day in valid_days_str_list if current.lower() in day.lower()
     ]
 
 @docks.command(name="sync")

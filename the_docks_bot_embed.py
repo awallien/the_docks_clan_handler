@@ -97,30 +97,37 @@ class TheDocksBotEmbed:
         return embed
 
     def make_drops_embed(drop_wh_name, days, players_drops):
-        players_drops_keys = list(players_drops.keys())
+        def mvd_percentage(player_drop):
+            """MVD value / Total GP"""
+            total_gp = player_drop.get("Total GP", 0)
+            mvd_value = player_drop.get("MVD", dict()).get("value", 0)
+
+            perc = 0
+            if total_gp != 0:
+                perc = mvd_value / total_gp
+            
+            return f"{perc * 100:.2f}%"
+        
         embed = Embed(
             title=f"{days}-Day \"{drop_wh_name}\" Drop Archive",
             color=Color.blue(),
-            description=f"I collected this clan's drops of the past {days} days. Here is what I found:",
+            description=f"I gathered the drops of The Docks Clan for the past {days} days. Here is what I collected:",
         )
 
-        embed.set_thumbnail(url="https://oldschool.runescape.wiki/w/Coins#/media/File:Coins_detail.png?404bc")
-        embed.set_footer(text="If you don't see your drops in this table, then your plugin is all screwed up, and I can't properly parse your drops. "
-                              "Please fix your plugin setup ASAP, or contact a fellow clan member to help you out.")
+        embed.set_thumbnail(url="https://oldschool.runescape.wiki/images/Coins_10000.png?7fa38")
+        embed.set_footer(text="¹MVD Percentage = (MVD/Accumulated GP)*100\n"
+                              "If you don't see your drops in the table above, then your plugin is all screwed up, and I can't properly parse your drops. "
+                              "Please fix your plugin setup ASAP, if you want, or contact a fellow clan member to help you out.")
         
-        embed.add_field(name="Player",
-                        value="\n".join(players_drops_keys),
-                        inline=True)
-        
-        ge_values = [str(players_drops[key].get("Total GE Value", 0)) for key in players_drops]
-        embed.add_field(name="Total GE Value",
-                        value="\n".join(ge_values),
-                        inline=True)
-        
-        mvis = [f"{players_drops[key]['MVI']['item']} ({players_drops[key]['MVI']['value']})" for key in players_drops]
-        embed.add_field(name="Most Valuable Item",
-                        value="\n".join(mvis),
-                        inline=True)
+        for player in players_drops:
+            drop_info = players_drops[player]
+
+            embed.add_field(name=player, 
+                            value=f"> **Accumulated GP**:              {format(drop_info.get('Total GP', 0), ',')}\n"
+                                  f"> **Most Valuable Drop (MVD)**:    {drop_info.get('MVD', dict()).get('item', 'N/A')}\n"
+                                  f"> **MVD Value**:                   {format(drop_info.get('MVD', dict()).get('value', 0), ',')}\n"
+                                  f"> **MVD Percentage¹**:             {mvd_percentage(drop_info)}",
+                            inline=False)
 
         return embed
 
