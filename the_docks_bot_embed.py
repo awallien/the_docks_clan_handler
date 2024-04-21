@@ -95,3 +95,36 @@ class TheDocksBotEmbed:
                                     inline=True)
 
         return embed
+
+    def make_drops_embed(drop_wh_name, days, players_drops):
+        players_drops_keys = list(players_drops.keys())
+        embed = Embed(
+            title=f"{days}-Day \"{drop_wh_name}\" Drop Archive",
+            color=Color.blue(),
+            description=f"I collected this clan's drops of the past {days} days. Here is what I found:",
+        )
+
+        embed.set_thumbnail(url="https://oldschool.runescape.wiki/w/Coins#/media/File:Coins_detail.png?404bc")
+        embed.set_footer(text="If you don't see your drops in this table, then your plugin is all screwed up, and I can't properly parse your drops. "
+                              "Please fix your plugin setup ASAP, or contact a fellow clan member to help you out.")
+        
+        embed.add_field(name="Player",
+                        value="\n".join(players_drops_keys),
+                        inline=True)
+        
+        ge_values = [str(players_drops[key].get("Total GE Value", 0)) for key in players_drops]
+        embed.add_field(name="Total GE Value",
+                        value="\n".join(ge_values),
+                        inline=True)
+        
+        mvis = [f"{players_drops[key]['MVI']['item']} ({players_drops[key]['MVI']['value']})" for key in players_drops]
+        embed.add_field(name="Most Valuable Item",
+                        value="\n".join(mvis),
+                        inline=True)
+
+        return embed
+
+
+
+
+

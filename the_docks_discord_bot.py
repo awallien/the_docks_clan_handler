@@ -1,10 +1,12 @@
-from argparse import ArgumentParser
 import os
 import random as rand
-from discord import ClientException, Intents, utils as dutils, app_commands
+from argparse import ArgumentParser
+from datetime import datetime, timedelta, timezone
+import re
+from dotenv import load_dotenv
+from discord import ClientException, Embed, Intents, utils as dutils, app_commands
 from discord.ext import commands
 from clan_database import ClanDatabase
-from dotenv import load_dotenv
 from logger import debug_print, debug_set_enable
 from the_docks_bot_embed import TheDocksBotEmbed
 
@@ -22,11 +24,27 @@ class TheDocksDiscordBot(commands.Bot):
         print(intents)
 
         super().__init__(self.cmd_prefix, intents=intents)
+    
+    def __init_discord_vars(self):
+        def __discord_get_or_fail(iterable, name):
+            res = dutils.get(iterable, name=name)
+            if not res:
+                raise ValueError(f"{name} returns None")
+            return res
+        
+        # Associate env vars to discord bot vars, when bot is "on ready"
+        self.guild = __discord_get_or_fail(self.guilds, self.guild)
+        self.drop_channel = __discord_get_or_fail(self.guild.channels, self.drop_channel)
+        self.general_channel = __discord_get_or_fail(self.guild.channels, self.general_channel)
+        self.mod = __discord_get_or_fail(self.guild.members, self.mod)
+
+        debug_print(f"guild({self.guild}), drop_channel({self.drop_channel}), general_channel({self.general_channel}), mod({self.mod}))")
 
     async def on_ready(self):
-        self.guild = dutils.get(self.guilds, name=self.guild_type)
-        self.mod = dutils.get(self.guild.members, name=os.getenv("BOT_OWNER"))
         debug_print(f"{self.user} has connected to Discord!")
+        
+        self.__init_discord_vars()
+        
         if self.guild and self.mod:
             debug_print(f"'{self.user}' is connected to Guild(id:{self.guild.id})")
         else:
@@ -37,18 +55,20 @@ class TheDocksDiscordBot(commands.Bot):
                 raise ClientException(f"Bot owner {self.mod} is not found!")
 
     def run(self, db, production=False):
-        self.mod = None
         self.db = db
+        self.mod = os.getenv("BOT_OWNER")
 
         if production:
-            self.guild_type = os.getenv("DISCORD_GUILD")
+            self.guild = os.getenv("DISCORD_GUILD")
             self.drop_channel = os.getenv("DROPS_CHANNEL")
+            self.drop_webhook = os.getenv("DROPS_WEBHOOK")
             self.general_channel = os.getenv("GENERAL_CHANNEL")
         else:
-            self.guild_type = os.getenv("DISCORD_DEV_GUILD")
+            self.guild = os.getenv("DISCORD_DEV_GUILD")
             self.drop_channel = os.getenv("DEV_DROPS_CHANNEL")
+            self.drop_webhook = os.getenv("DEV_DROPS_WEBHOOK")
             self.general_channel = os.getenv("DEV_GENERAL_CHANNEL")
-
+        
         super().run(self.TOKEN)
 
 """Discord Bot Initialization"""
@@ -63,7 +83,7 @@ async def docks(ctx):
     await ctx.send(embed=embed, ephemeral=True, reference=ctx.message)
 
 
-@docks.command()
+@docks.command(name="player")
 async def player(ctx, player_name, option=None):   
 
     is_detailed = False
@@ -101,7 +121,6 @@ async def player(ctx, player_name, option=None):
     
     await ctx.send(embed=embed, ephemeral=True, reference=ctx.message)
     
-
 @player.autocomplete("option")
 async def opt_player_autocompletion(_, current):
     options = ["add", "delete", "detail"]
@@ -110,10 +129,73 @@ async def opt_player_autocompletion(_, current):
         for option in options if current.lower() in option.lower()
     ]
 
+
+valid_days = ["30", "60", "90", "180"]
+
+@docks.command(name="drops")
+async def drops(ctx, days="30"):
+    def get_drop_embed_info(embed: Embed):
+        info = type("info", (), {"player":"N/A", "item":"N/A", "value":0})()
+        info.player = embed.author.name
+        
+        # get GE value
+        ge_value_field = next((field for field in embed.fields if field.name == "GE Value"), None)
+        if ge_value_field:
+            value = ge_value_field.value
+            match = re.search(r'[\d,]+', value)
+            if match:
+                info.value = int(match.group(0).replace(",", ""))
+        
+        # get item name
+        matches = re.findall(r'\[([^\]]+)\]', embed.description)
+        if matches:
+            info.item = matches[0]
+        
+        return info
+
+    if days not in valid_days:
+        await ctx.send(f"Error: invalid input for days ({days})")
+        return
+
+    days = int(days)
+    dtime_days = (datetime.now() - timedelta(days=days)).replace(tzinfo=timezone.utc)
+    players_drops = dict() # {K:name, V:{"Total GE Value":<int> "MVI":{"item":<string>, "value":<int>}}
+    message_cnt = 1
+
+    async for message in BOT.drop_channel.history(after=dtime_days, oldest_first=True):
+        if message.author.name == BOT.drop_webhook:
+            if message.embeds:
+                debug_print(f"message {message_cnt}")
+                message_cnt += 1
+                for embed in message.embeds: # There should only be one embed, but looping over all embeds just in case
+                    info = get_drop_embed_info(embed)
+                    debug_print(f"{info.player}, {info.item}, {info.value}")
+                    player_drops_info = players_drops.get(info.player, None)                    
+                    if player_drops_info is None:
+                        players_drops[info.player] = {"Total GE Value": 0, "MVI":{"item": "", "value":0}}
+                        player_drops_info = players_drops[info.player]
+
+                    player_drops_info["Total GE Value"] += info.value
+                    player_drops_info_mvi = player_drops_info["MVI"]
+                    if info.value > player_drops_info_mvi["value"]:
+                        player_drops_info_mvi["value"] = info.value
+                        player_drops_info_mvi["item"] = info.item
+    
+    embed = TheDocksBotEmbed.make_drops_embed(BOT.drop_webhook, days, players_drops)
+    await ctx.send(embed=embed, reference=ctx.message)
+
+
+@drops.autocomplete("days")
+async def days_drops_autocompletion(_, current):
+    return [
+        app_commands.Choice(name=day, value=day)
+        for day in valid_days if current.lower() in day.lower()
+    ]
+
 @docks.command(name="sync")
 async def sync(_):
     await BOT.tree.sync()
-    await BOT.mod.send("synced commands to " + str(BOT.guild))
+    await BOT.mod.send(f"synced commands to {str(BOT.guild)}")
 
 if __name__ == "__main__":
     parser = ArgumentParser(
