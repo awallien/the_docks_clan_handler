@@ -95,3 +95,43 @@ class TheDocksBotEmbed:
                                     inline=True)
 
         return embed
+
+    def make_drops_embed(drop_wh_name, days, players_drops):
+        def mvd_percentage(player_drop):
+            """MVD value / Total GP"""
+            total_gp = player_drop.get("Total GP", 0)
+            mvd_value = player_drop.get("MVD", dict()).get("value", 0)
+
+            perc = 0
+            if total_gp != 0:
+                perc = mvd_value / total_gp
+            
+            return f"{perc * 100:.2f}%"
+        
+        embed = Embed(
+            title=f"{days}-Day \"{drop_wh_name}\" Drop Archive",
+            color=Color.blue(),
+            description=f"I gathered the drops of The Docks Clan for the past {days} days. Here is what I collected:",
+        )
+
+        embed.set_thumbnail(url="https://oldschool.runescape.wiki/images/Coins_10000.png?7fa38")
+        embed.set_footer(text="¹MVD Percentage = (MVD/Accumulated GP)*100\n"
+                              "If you don't see your drops in the table above, then your plugin is all screwed up, and I can't properly parse your drops. "
+                              "Please fix your plugin setup ASAP, if you want, or contact a fellow clan member to help you out.")
+        
+        for player in players_drops:
+            drop_info = players_drops[player]
+
+            embed.add_field(name=player, 
+                            value=f"> **Accumulated GP**:              {format(drop_info.get('Total GP', 0), ',')}\n"
+                                  f"> **Most Valuable Drop (MVD)**:    {drop_info.get('MVD', dict()).get('item', 'N/A')}\n"
+                                  f"> **MVD Value**:                   {format(drop_info.get('MVD', dict()).get('value', 0), ',')}\n"
+                                  f"> **MVD Percentage¹**:             {mvd_percentage(drop_info)}",
+                            inline=False)
+
+        return embed
+
+
+
+
+
