@@ -144,6 +144,8 @@ async def drops(ctx, days=30):
             match = re.search(r'[\d,]+', value)
             if match:
                 info.value = int(match.group(0).replace(",", ""))
+        else:
+            return None
         
         # get item name
         matches = re.findall(r'\[([^\]]+)\]', embed.description)
@@ -167,8 +169,9 @@ async def drops(ctx, days=30):
                 message_cnt += 1
                 for embed in message.embeds: # There should only be one embed, but looping over all embeds just in case
                     info = get_drop_embed_info(embed)
+                    if info is None:
+                        break
                     debug_print(f"{info.player}, {info.item}, {info.value}")
-                    info.player = ["metaGoose", "metaHorse", "Noob"][message_cnt % 3]
                     player_drops_info = players_drops.get(info.player, None)
                     if player_drops_info is None:
                         players_drops[info.player] = {"Total GP": 0, "MVD":{"item": "", "value":0}}
