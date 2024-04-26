@@ -1,8 +1,6 @@
 import shlex
-
 from argparse import ArgumentParser
-from logger import debug_set_enable, debug_print
-
+from . import debug_set_enable, debug_print
 
 class PromptArgsResponse:
     def __init__(self, res, err_msg):

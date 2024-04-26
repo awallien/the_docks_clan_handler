@@ -2,13 +2,13 @@ import pathlib
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from prompt_args import RESPONSE_ERR, RESPONSE_OK
-from logger import debug_print, err_print
+from util.prompt_args import RESPONSE_ERR, RESPONSE_OK
+from util.logger import debug_print, err_print
 
 class ClanDatabase:
     """Handles a clan members' info in a database"""
 
-    cache_db_file = str(pathlib.Path(__file__).parent.absolute()) + "/cache/cache_db.csv"
+    cache_db_file = str(pathlib.Path(__file__).parent.absolute()) + "/cache_db.csv"
     ONE_MONTH_ACTIVE = 3
     
     # member's username

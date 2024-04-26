@@ -1,10 +1,9 @@
 import heapq
 
 from osrs_api import Hiscores, const
-from prompt_args import *
 from argparse import ArgumentParser
-from logger import debug_set_enable, debug_print, err_print
-from clan_database import *
+from util import *
+from clan_db import ClanDatabase
 
 class PlayerRankHandler:
     """Handles Rank Calculations for a clan member"""
@@ -65,7 +64,6 @@ class PlayerRankHandler:
             p_hiscore = Hiscores(player, const.AccountType.NORMAL)
             return p_hiscore
         except Exception as e:
-            debug_print
             return None
 
 
