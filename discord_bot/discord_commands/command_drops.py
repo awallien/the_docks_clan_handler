@@ -1,4 +1,4 @@
-from util.logger import debug_print
+from util import debug_print
 from datetime import datetime, timedelta, timezone
 import re
 from discord import Color, Embed, app_commands
