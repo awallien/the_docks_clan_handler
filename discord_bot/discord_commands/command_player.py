@@ -2,6 +2,7 @@ from pandas import isna
 from clan_db.clan_database import ClanDatabase
 from discord import Color, Embed, app_commands
 
+from util import debug_print
 from discord_bot.embed_util import err_embed, get_rank_icon_url, info_embed
 from player_rank_script import PlayerRankHandler
 
@@ -22,6 +23,8 @@ async def cb_player(BOT, ctx, player_name, option=None):
         is_deleted = True
     elif option == "detail":
         is_detailed = True 
+
+    debug_print(f"option: add({is_add}) delete({is_deleted}) detail({is_detailed}))")
 
     msg = ""
     player_info = BOT.db.get_player_data(player_name)
