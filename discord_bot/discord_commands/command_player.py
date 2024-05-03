@@ -9,7 +9,7 @@ from player_rank_script import PlayerRankHandler
 OPTIONS = ["add", "delete", "detail"]
 
 async def cb_player(BOT, ctx, player_name, option=None):   
-    if option not in OPTIONS:
+    if option and option not in OPTIONS:
         return err_embed(f"Error: invalid input for option ({option})")
 
     is_detailed = False
