@@ -6,24 +6,28 @@ from discord import Color, Embed, app_commands
 VALID_DAYS = [30, 60, 90, 180]
 
 def get_drop_embed_info(embed: Embed):
-    info = type("info", (), {"player":"N/A", "item":"N/A", "value":0})()
+    """processes one embed to get info of player, item, and the item's value"""
+    info = type("info", (), {"player":"N/A", "item":"N/A", "quantity":1, "value":0})()
     info.player = embed.author.name
     
     # get GE value
     ge_value_field = next((field for field in embed.fields if field.name == "GE Value"), None)
     if ge_value_field:
-        value = ge_value_field.value
-        match = re.search(r'[\d,]+', value)
-        if match:
-            info.value = int(match.group(0).replace(",", ""))
+        value_str = ge_value_field.value
+        match = re.search(r'[\d,]+', value_str)
+        info.value = int(match.group(0).replace(",", "")) if match else 0
     else:
         return None
     
     # get item name
-    matches = re.findall(r'\[([^\]]+)\]', embed.description)
-    if matches:
-        info.item = matches[0]
+    matches = re.search(r'(\d+x)?\s*\[([^\]]+)\]', embed.description)
     
+    quantity = matches.group(1)
+    if quantity:
+        info.quantity = int(matches.group(1)[:-1])
+    
+    info.item = matches.group(2)
+
     return info
 
 async def cb_drops(BOT, ctx, days=30):
@@ -32,9 +36,9 @@ async def cb_drops(BOT, ctx, days=30):
         return
 
     dtime_days = (datetime.now() - timedelta(days=days)).replace(tzinfo=timezone.utc)
-    players_drops = dict() # {K:name, V:{"Total GE Value":<int> "MVI":{"item":<string>, "value":<int>}}
+    
+    players_drops = dict() # {K:name, V:{"Total GP":<int> "items":{"item <str>": {"value":<int>,"count":<int>}}, "MVD_item": <str|None>}
     message_cnt = 1
-
     async for message in BOT.drop_channel.history(after=dtime_days, oldest_first=True):
         if message.author.name == BOT.drop_webhook:
             if message.embeds:
@@ -44,17 +48,27 @@ async def cb_drops(BOT, ctx, days=30):
                     info = get_drop_embed_info(embed)
                     if info is None:
                         break
-                    debug_print(f"{info.player}, {info.item}, {info.value}")
+                    
+                    debug_print(f"{info.player}, {info.quantity}, {info.item}, {info.value}")
+                    
                     player_drops_info = players_drops.get(info.player, None)
                     if player_drops_info is None:
-                        players_drops[info.player] = {"Total GP": 0, "MVD":{"item": "", "value":0}}
+                        players_drops[info.player] = {"Total GP": 0, "items": {}, "MVD_item": None}
                         player_drops_info = players_drops[info.player]
 
                     player_drops_info["Total GP"] += info.value
-                    player_drops_info_mvi = player_drops_info["MVD"]
-                    if info.value > player_drops_info_mvi["value"]:
-                        player_drops_info_mvi["value"] = info.value
-                        player_drops_info_mvi["item"] = info.item
+                    
+                    drops_item = player_drops_info["items"].get(info.item, None)
+                    if drops_item is None:
+                        drops_item = {"value": info.value, "count": 1}
+                        player_drops_info["items"][info.item] = drops_item
+                    else:
+                        drops_item["value"] += info.value
+                        drops_item["count"] += info.quantity
+
+                    mvd_item = player_drops_info["MVD_item"]
+                    if (mvd_item is None) or (drops_item["value"] > player_drops_info["items"][mvd_item]["value"]):
+                        player_drops_info["MVD_item"] = info.item
     
     embed = make_drops_embed(BOT.drop_webhook, days, players_drops)
     await ctx.send(embed=embed, reference=ctx.message)
@@ -66,15 +80,11 @@ async def days_drops_autocompletion(_, current):
         for day in valid_days_str_list if current.lower() in day.lower()
     ]
 
-def mvd_percentage(player_drop):
+def mvd_percentage(total_gp, mvd_value):
     """MVD value / Total GP"""
-    total_gp = player_drop.get("Total GP", 0)
-    mvd_value = player_drop.get("MVD", dict()).get("value", 0)
-
     perc = 0
     if total_gp != 0:
         perc = mvd_value / total_gp
-    
     return f"{perc * 100:.2f}%"
 
 def make_drops_embed(drop_wh_name, days, players_drops):
@@ -85,18 +95,24 @@ def make_drops_embed(drop_wh_name, days, players_drops):
     )
 
     embed.set_thumbnail(url="https://oldschool.runescape.wiki/images/Coins_10000.png?7fa38")
-    embed.set_footer(text="¹MVD Percentage = (MVD/Accumulated GP)*100\n"
+    embed.set_footer(text="¹MVD Percentage = (MVD Value/Accumulated GP)*100\n"
                             "If you don't see your drops in the table above, then your plugin is all screwed up, and I can't properly parse your drops. "
-                            "Please fix your plugin setup ASAP, if you want, or contact a fellow clan member to help you out.")
+                            "Please fix your plugin setup ASAP, if you want, or reach out to a fellow clan member to help you out.")
     
     for player in players_drops:
-        drop_info = players_drops[player]
+        drops_info = players_drops[player]
+        total_gp = drops_info["Total GP"]
+        mvd_item = drops_info["MVD_item"]
+        mvd_info = drops_info["items"][mvd_item]
+        mvd_value = mvd_info["value"]
+        mvd_count = mvd_info["count"]
 
         embed.add_field(name=player, 
-                        value=f"> **Accumulated GP**:                {format(drop_info.get('Total GP', 0), ',')}\n"
-                                f"> **Most Valuable Drop (MVD)**:    {drop_info.get('MVD', dict()).get('item', 'N/A')}\n"
-                                f"> **MVD Value**:                   {format(drop_info.get('MVD', dict()).get('value', 0), ',')}\n"
-                                f"> **MVD Percentage¹**:             {mvd_percentage(drop_info)}",
+                        value=f"> **Accumulated GP**:              {format(total_gp, ',')}\n"
+                              f"> **Number of Unique Drops**:      {len(drops_info['items'])}\n"
+                              f"> **Most Valuable Drop (MVD)**:    {mvd_count}x {mvd_item}\n"
+                              f"> **MVD Value**:                   {format(mvd_value, ',')}\n"
+                              f"> **MVD Percentage¹**:             {mvd_percentage(total_gp, mvd_value)}",
                         inline=False)
 
     return embed
