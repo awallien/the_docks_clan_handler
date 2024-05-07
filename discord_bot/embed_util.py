@@ -19,14 +19,16 @@ def get_rank_icon_url(rank):
         raise Exception(f"Rank not found: {rank}")
     return ICON_URI_PATH + rank_to_icon[rank]
 
-def err_embed(msg):
+def err_embed(msg, title="Error"):
     return Embed(
-        title=msg,
+        title=title,
+        description=msg,
         color=Color.dark_red()
     )
 
-def info_embed(msg):
+def info_embed(msg, title="Info"):
     return Embed(
-        title=msg,
+        title=title,
+        description=msg,
         color=Color.blue()
     )

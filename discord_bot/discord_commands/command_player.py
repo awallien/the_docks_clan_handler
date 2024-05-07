@@ -31,7 +31,7 @@ async def cb_player(BOT, ctx, player_name, option=None):
     if is_add:
         if not player_info:
             msg = f"Your request to add {player_name} has been submitted to Goose."
-            embed = info_embed(msg)
+            embed = info_embed(msg, "Request Submitted")
             send_msg_to_mod = True
         else:
             embed = err_embed(f"{player_name} already exists in clan")
@@ -39,7 +39,7 @@ async def cb_player(BOT, ctx, player_name, option=None):
         embed = err_embed(f"Player {player_name} is not found in clan database")
     elif is_deleted:
         msg = f"Your request to delete {player_name} has been submitted to Goose."
-        embed = info_embed(msg)
+        embed = info_embed(msg, "Request submitted")
         send_msg_to_mod = True
     else:
         embed = make_player_info_embed(player_name, player_info, is_detailed)
