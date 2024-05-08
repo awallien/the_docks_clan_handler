@@ -75,18 +75,18 @@ BOT = TheDocksDiscordBot()
 """All commands would be under the tag: docks"""
 @BOT.hybrid_group()
 async def docks(ctx):
-    embed = info_embed(["Honk", ":v"][rand.randint(0,1)])
+    embed = info_embed(":v", "Honk")
     await ctx.send(embed=embed, ephemeral=True, reference=ctx.message)
 
 """Command List"""
 @docks.command(name="sync")
-async def sync(_):
+async def sync(ctx):
     await BOT.tree.sync()
-    await BOT.mod.send(f"synced commands to {str(BOT.guild)}")
+    await ctx.send(f"Commands are synced to {str(BOT.guild)}")
 
 @docks.command(name="player")
 @app_commands.autocomplete(option=opt_player_autocompletion)
-async def player(ctx, player_name, option:str = None):
+async def player(ctx, player_name, option:str=None):
     await cb_player(BOT, ctx, player_name, option)
 
 @docks.command(name="drops")
@@ -94,10 +94,22 @@ async def player(ctx, player_name, option:str = None):
 async def drops(ctx, days=30):
     await cb_drops(BOT, ctx, days)
 
+@docks.command(name="spin")
+@app_commands.autocomplete(randomize_weights=set_true_autocompletion,
+                           shuffle_options=set_true_autocompletion,
+                           options_detail=set_true_autocompletion)
+async def spin(ctx,
+               options:str,
+               weights:str=None,
+               randomize_weights:str=None,
+               shuffle_options:str=None,
+               options_detail:str=None):
+    await spin_cb(BOT, ctx, options, weights, randomize_weights, shuffle_options, options_detail)
+
 if __name__ == "__main__":
     parser = ArgumentParser(
-        prog="player_rank_script.py",
-        description="The Docks Ranking Script",
+        prog="bot.py",
+        description="The Docks Clan Bot",
         allow_abbrev=False
     )
 
