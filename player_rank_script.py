@@ -1,71 +1,6 @@
-import heapq
-
-from osrs_api import Hiscores, const
 from argparse import ArgumentParser
 from util import *
 from clan_db import ClanDatabase
-
-class PlayerRankHandler:
-    """Handles Rank Calculations for a clan member"""
-
-    CMB_SKILLS = ['attack', 'defence', 'strength', 'magic', 'ranged']
-    MELEE_CMB_SKILLS = ['attack', 'defence', 'strength']
-    NEW_PLAYER_RANKS = [1, 2]
-    ACTIVENESS_RANK_3 = 3
-    ACTIVENESS_RANK_4 = 4
-    ACTIVENESS_RANKS = [ACTIVENESS_RANK_3, ACTIVENESS_RANK_4]
-    ACHIEVEMENT_RANK_10 = 10
-    ACHIEVEMENT_RANKS = [5, 6, 7, 8, 9, ACHIEVEMENT_RANK_10]
-    HONOR_RANKS = [11, 12, 13, 14]
-    MOD_RANKS = ["A","D","O"]
-
-    def __init__(self, player) -> None:
-        assert(isinstance(player, Hiscores))
-        self.player: Hiscores = player
-
-    def get_new_player_rank(self):
-        max_levels_info = self.get_max_levels_info()
-        if max_levels_info["rank"] >= 9:
-            return 2
-        return 1
-        
-    def get_max_levels_info(self):
-        skills = {"combat": {}, "other": {}}
-
-        for skill_name,skill_obj in self.player.skills.items():
-            if skill_name in self.CMB_SKILLS:
-                skills["combat"][skill_name] = skill_obj.level
-            elif skill_name != "hitpoints":
-                skills["other"][skill_name] = skill_obj.level
-
-        melee_lvls = [(name,skills["combat"][name]) for name in self.MELEE_CMB_SKILLS]
-        melee_max_lvl = max(melee_lvls, key=lambda x: x[1])
-        ranged_lvl = ("ranged", skills["combat"]["ranged"])
-        magic_lvl = ("magic", skills["combat"]["magic"])
-        cmb_avg = self.calc_avg(melee_max_lvl[1], ranged_lvl[1], magic_lvl[1])
-
-        max_others = heapq.nlargest(3, skills["other"].items(), key=lambda x: x[1]) 
-        others_avg = self.calc_avg(*[other[1] for other in max_others])        
-
-        return ({
-            "cmb": {"melee": melee_max_lvl, "ranged": ranged_lvl, "magic": magic_lvl},
-            "other": {name:lvl for name,lvl in max_others},
-            "avg": {"cmb": cmb_avg, "other": others_avg},
-            "rank": max(cmb_avg//10, others_avg//10) + 1
-        })
-
-    @staticmethod
-    def calc_avg(*args): 
-        return sum(args)//len(args)
-    
-    @classmethod
-    def player_hiscore_get(cls, player):
-        try:
-            p_hiscore = Hiscores(player, const.AccountType.NORMAL)
-            return p_hiscore
-        except Exception as e:
-            return None
-
 
 class ClanRankScriptHandler(PromptRunner):
     """Handles user's commands"""
@@ -186,16 +121,11 @@ class ClanRankScriptHandler(PromptRunner):
         elif player::rank in [5-9] and after update:
             player::rank = get updated(rank player) -> player::rank + 1
         """
-        player_rank = player_db_data[ClanDatabase.RANK]
+        player_rank = sanitize_player_rank(player_db_data[ClanDatabase.RANK])
         player_active_cnt = int(player_db_data[ClanDatabase.ACTIVE_CNT])
         player_is_active = (player_active_cnt >= ClanDatabase.ONE_MONTH_ACTIVE)
         new_rank = 0
         status = RESPONSE_OK
-
-        if str(player_rank).isnumeric():
-            player_rank = int(player_rank)
-        else:
-            return status
 
         if player_rank in PlayerRankHandler.NEW_PLAYER_RANKS:
             if player_is_active:
@@ -227,15 +157,10 @@ class ClanRankScriptHandler(PromptRunner):
          set active_cnt to 0
         update db with active_cnt and/or total_xp
         """
-        player_rank = player_db_data[ClanDatabase.RANK]
+        player_rank = sanitize_player_rank(player_db_data[ClanDatabase.RANK])
         player_total_xp = self.__get_total_xp(player_hiscore)
         db_total_xp = player_db_data[ClanDatabase.TOTAL_XP]
         status = RESPONSE_OK
-
-        if str(player_rank).isnumeric():
-            player_rank = int(player_rank)
-        else:
-            return RESPONSE_OK
 
         if player_rank in PlayerRankHandler.NEW_PLAYER_RANKS or player_rank in PlayerRankHandler.ACTIVENESS_RANKS:
             active_cnt = False
@@ -251,7 +176,6 @@ class ClanRankScriptHandler(PromptRunner):
 
         return status
         
-
     def cb_update_db(self, _):
         update_cbs = [
             self.__cb_update_player_active_xp,
