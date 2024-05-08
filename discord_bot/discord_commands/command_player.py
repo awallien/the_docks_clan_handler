@@ -2,19 +2,21 @@ from pandas import isna
 from clan_db.clan_database import ClanDatabase
 from discord import Color, Embed, app_commands
 
-from util import debug_print
-from discord_bot.discord_bot_util import err_embed, get_rank_icon_url, info_embed
+from util import debug_print, PlayerRankHandler, sanitize_player_rank
+from discord_bot.discord_bot_util import err_embed, get_rank_icon_url, info_embed, request_submitted_embed
 from player_rank_script import PlayerRankHandler
 
-OPTIONS = ["add", "delete", "detail"]
+OPTIONS = ["add", "delete", "detail", "request_rank_challenge"]
 
-async def cb_player(BOT, ctx, player_name, option=None):   
+async def cb_player(BOT, ctx, player_name, option=None, name_change=None):   
     if option and option not in OPTIONS:
         return err_embed(f"Error: invalid input for option ({option})")
 
     is_detailed = False
     is_add = False
     is_deleted = False
+    req_rank_chlg = False
+    req_name_change = False
     send_msg_to_mod = False
 
     if option == "add":
@@ -22,7 +24,11 @@ async def cb_player(BOT, ctx, player_name, option=None):
     elif option == "delete":
         is_deleted = True
     elif option == "detail":
-        is_detailed = True 
+        is_detailed = True
+    elif option == "request_rank_challenge":
+        req_rank_chlg = True
+    elif name_change is not None:
+        req_name_change = True
 
     debug_print(f"option: add({is_add}) delete({is_deleted}) detail({is_detailed}))")
 
@@ -31,7 +37,7 @@ async def cb_player(BOT, ctx, player_name, option=None):
     if is_add:
         if not player_info:
             msg = f"Your request to add {player_name} has been submitted to Goose."
-            embed = info_embed(msg, "Request Submitted")
+            embed = request_submitted_embed(msg)
             send_msg_to_mod = True
         else:
             embed = err_embed(f"{player_name} already exists in clan")
@@ -39,7 +45,20 @@ async def cb_player(BOT, ctx, player_name, option=None):
         embed = err_embed(f"Player {player_name} is not found in clan database")
     elif is_deleted:
         msg = f"Your request to delete {player_name} has been submitted to Goose."
-        embed = info_embed(msg, "Request submitted")
+        embed = request_submitted_embed(msg)
+        send_msg_to_mod = True
+    elif req_rank_chlg:
+        if sanitize_player_rank(player_info[ClanDatabase.RANK]) not in PlayerRankHandler.HONOR_RANKS:
+            msg = f"Your request is denied, due to {player_name} not achieving the Honorable Ranks.\n" \
+                   "Please reach out to Goose if this is a mistake."
+            embed = err_embed(msg, "Sorry")
+        else:
+            msg = f"Your request for {player_name}'s ranking challenge has been submitted to Goose."
+            embed = request_submitted_embed(msg)
+            send_msg_to_mod = True
+    elif req_name_change:
+        msg = f"Your request for RSN name change from {player_name} to {name_change} has been submitted to Goose."
+        embed = request_submitted_embed(msg)
         send_msg_to_mod = True
     else:
         embed = make_player_info_embed(player_name, player_info, is_detailed)

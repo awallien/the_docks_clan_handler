@@ -33,6 +33,9 @@ def info_embed(msg, title="Info"):
         color=Color.blue()
     )
 
+def request_submitted_embed(msg):
+    return info_embed(msg, "Request Submitted")
+
 async def set_true_autocompletion(_, current):
     return [
         app_commands.Choice(name=choice, value=choice)

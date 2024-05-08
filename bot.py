@@ -86,8 +86,8 @@ async def sync(ctx):
 
 @docks.command(name="player")
 @app_commands.autocomplete(option=opt_player_autocompletion)
-async def player(ctx, player_name, option:str=None):
-    await cb_player(BOT, ctx, player_name, option)
+async def player(ctx, player_name, option:str=None, name_change:str=None):
+    await cb_player(BOT, ctx, player_name, option, name_change)
 
 @docks.command(name="drops")
 @app_commands.autocomplete(days=days_drops_autocompletion)
