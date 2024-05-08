@@ -1,4 +1,4 @@
-from discord import Embed, Color
+from discord import Embed, Color, app_commands
 
 ICON_URI_PATH = "https://oldschool.runescape.wiki/images/Clan_icon_-_"
 rank_to_icon = {
@@ -32,3 +32,9 @@ def info_embed(msg, title="Info"):
         description=msg,
         color=Color.blue()
     )
+
+async def set_true_autocompletion(_, current):
+    return [
+        app_commands.Choice(name=choice, value=choice)
+        for choice in ["True"] if current.lower() in choice.lower()
+    ]

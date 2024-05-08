@@ -4,7 +4,7 @@ import numpy as np
 from io import BytesIO
 from PIL import Image, ImageDraw
 from discord import app_commands, Embed, File
-from discord_bot.embed_util import err_embed
+from discord_bot.discord_bot_util import err_embed
 from util import RESPONSE_ERR, RESPONSE_OK, debug_print
 from resources import CHAT_BG, OSRS_FONT
 
@@ -13,23 +13,20 @@ MAX_OPT_CHAR_LEN = 20
 MAX_OPTIONS_LEN = 20 
 OSRS_FONT_SIZE = 20
 
-async def spin_cb(_, ctx, options, weights=None, randomize_weights=None, show_options_detail=None):
+async def spin_cb(_, ctx, options, weights=None, randomize_weights=None, shuffle_options=None, options_detail=None):
     val = validate_params(options, weights, randomize_weights)
     if not val:
         await ctx.send(embed=err_embed(val.err), ephemeral=True)
         return
 
-    opt_fields = options.strip().split(",")
+    opt_fields = list(map(str.strip, options.strip().split(",")))
     opt_len = len(opt_fields)
     weights = convert_param_weights(opt_len, weights, randomize_weights)
 
-    await process_spin_images(ctx, opt_fields, weights, opt_len, show_options_detail)
+    if shuffle_options:
+        rand.shuffle(opt_fields)
 
-async def randomized_weights_spin_autocompletion(_, current):
-    return [
-        app_commands.Choice(name=choice, value=choice)
-        for choice in RANDOM_WEIGHTS_OPTIONS if current.lower() in choice.lower()
-    ]
+    await process_spin_images(ctx, opt_fields, weights, opt_len, options_detail)
 
 def validate_params(options, weights, randomize_weights):
     if options is None:
@@ -94,6 +91,9 @@ def convert_param_weights(opt_len, weights, randomize_weights):
 def get_rng_option(options, weights, opts_len):
     rng = rand.random()
     total = 0
+
+    debug_print(f"RNG: {rng}")
+
     for idx in range(opts_len):
         option = options[idx]
         weight = weights[idx]

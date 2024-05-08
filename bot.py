@@ -95,10 +95,16 @@ async def drops(ctx, days=30):
     await cb_drops(BOT, ctx, days)
 
 @docks.command(name="spin")
-@app_commands.autocomplete(randomize_weights=randomized_weights_spin_autocompletion,
-                           show_options_detail=randomized_weights_spin_autocompletion)
-async def spin(ctx, options:str, weights:str=None, randomize_weights:str=None, show_options_detail:str=None):
-    await spin_cb(BOT, ctx, options, weights, randomize_weights, show_options_detail)
+@app_commands.autocomplete(randomize_weights=set_true_autocompletion,
+                           shuffle_options=set_true_autocompletion,
+                           options_detail=set_true_autocompletion)
+async def spin(ctx,
+               options:str,
+               weights:str=None,
+               randomize_weights:str=None,
+               shuffle_options:str=None,
+               options_detail:str=None):
+    await spin_cb(BOT, ctx, options, weights, randomize_weights, shuffle_options, options_detail)
 
 if __name__ == "__main__":
     parser = ArgumentParser(

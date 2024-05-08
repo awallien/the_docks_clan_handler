@@ -3,7 +3,7 @@ from clan_db.clan_database import ClanDatabase
 from discord import Color, Embed, app_commands
 
 from util import debug_print
-from discord_bot.embed_util import err_embed, get_rank_icon_url, info_embed
+from discord_bot.discord_bot_util import err_embed, get_rank_icon_url, info_embed
 from player_rank_script import PlayerRankHandler
 
 OPTIONS = ["add", "delete", "detail"]
