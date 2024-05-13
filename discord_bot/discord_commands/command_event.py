@@ -5,7 +5,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from discord import app_commands, Thread, EntityType, PrivacyLevel, EventStatus
 from discord_bot import err_embed, info_embed
-from util import RESPONSE_ERR, RESPONSE_OK, err_print
+from util import RESPONSE_ERR, RESPONSE_OK, err_print, debug_print
 
 OPTIONS = ["add", "update", "delete"]
 
@@ -32,7 +32,7 @@ def validate_date_times(option, start_time, end_time, tzone):
         if start_time is None:
             return RESPONSE_ERR("`start_time` is mandatory when creating a new event.")
         if tzone is None or tzone not in TZ_OPTIONS:
-            return RESPONSE_ERR("A valid `timezone` is mandatory when creating a new event")
+            return RESPONSE_ERR("A valid `timezone` is mandatory when creating a new event.")
 
         tz = ZoneInfo(TZ_OPTIONS[tzone])
         parse_str = "start_time"
@@ -57,18 +57,20 @@ def validate_date_times(option, start_time, end_time, tzone):
             return RESPONSE_ERR("Please provide `timezone` when updating `start_time` or `end_time`.")
         
         if tzone:
-            tz = ZoneInfo(TZ_OPTIONS[tzone])
-        
-        parse_str = "start_time"
-        try:
-            if start_time:
-                start_time = datetime.strptime(start_time, format_str).replace(tzinfo=tz)
-            parse_str = "end_time"
-            if end_time:
-                end_time = datetime.strptime(end_time, format_str).replace(tzinfo=tz)
-        except ValueError:
-            return RESPONSE_ERR(f"`{parse_str}` is NOT in a valid format. Expecting [MM-DD-YYYY HH:MM AM/PM]")
-    
+            tz = ZoneInfo(TZ_OPTIONS[tzone])        
+            parse_str = "start_time"
+            try:
+                if start_time:
+                    start_time = datetime.strptime(start_time, format_str).replace(tzinfo=tz)
+                parse_str = "end_time"
+                if end_time:
+                    end_time = datetime.strptime(end_time, format_str).replace(tzinfo=tz)
+            except ValueError:
+                return RESPONSE_ERR(f"`{parse_str}` is NOT in a valid format. Expecting [MM-DD-YYYY HH:MM AM/PM]")
+    else:
+        if any([start_time, end_time, tzone]):
+            return RESPONSE_ERR(f"No need to set any time parameters when deleting an event")
+
     return (start_time, end_time)
 
 async def event_cb(BOT, ctx, option, start_time, end_time, tzone):
@@ -110,8 +112,8 @@ async def event_cb(BOT, ctx, option, start_time, end_time, tzone):
                 res = await add_event(BOT, ctx, forum_thread, scheduled_events, start_time, end_time)
             elif option == "update":
                 res = await update_event(BOT, ctx, forum_thread, start_time, end_time)
-            # else:
-            #     await delete_event(BOT, ctx)
+            else:
+                res = await delete_event(BOT, ctx, forum_thread)
             if not res:
                 err = err_embed(f"{res.err}", "Something went wrong")
                 await reply_msg.edit(embeds=[err])
@@ -119,7 +121,7 @@ async def event_cb(BOT, ctx, option, start_time, end_time, tzone):
                 success = info_embed(f"{OPTIONS_TO_MSG[option][1]}\nEvent ID: {res}\nDO NOT DELETE THIS MESSAGE!", f"Success!")
                 await reply_msg.edit(embeds=[success])
         except Exception as e:
-            err_print(str(e))
+            err_print(f"Error caught in {option}: {str(e)}")
         
         if forum_thread.id in EVENTS_SET:
             EVENTS_SET.remove(forum_thread.id)
@@ -149,7 +151,7 @@ async def add_event(BOT, ctx, forum_thread, scheduled_events, start_time, end_ti
 
     sch_event = await find_thread_scheduled_event(BOT, forum_thread)
     if sch_event:
-        return RESPONSE_ERR(f"Hmmm... it appears there's already an event created for this thread forum, Event ID: {event_id}")
+        return RESPONSE_ERR(f"Hmmm... it appears there's already an event created for this thread forum, Event ID: {event.id}")
     
     event = check_event_exists(thr_name, thr_content, scheduled_events)
     if event:
@@ -186,11 +188,18 @@ async def add_event(BOT, ctx, forum_thread, scheduled_events, start_time, end_ti
     return new_event.id
 
 
-async def delete_event(BOT, ctx):
+async def delete_event(BOT, ctx, forum_thread):
     """
     When user requests to delete event:
      1.   fetch the event that was created within the forum thread and delete it
     """
+    event = await find_thread_scheduled_event(BOT, forum_thread)
+    if not event:
+        return RESPONSE_ERR("Hmmm... I can't find a valid event ID in this forum thread. Did you delete it by accident?")
+
+    event_id = event.id
+    await event.delete()
+    return event_id
 
 async def update_event(BOT, _, forum_thread, start_time, end_time):
     """
@@ -201,7 +210,7 @@ async def update_event(BOT, _, forum_thread, start_time, end_time):
     """
     event = await find_thread_scheduled_event(BOT, forum_thread)
     if not event:
-        return RESPONSE_ERR("Hmmm... it looks like I can't find the event id in this forum thread. Did you delete it by accident?")
+        return RESPONSE_ERR("Hmmm... I can't find a valid event ID in this forum thread. Did you delete it by accident?")
 
     thr_discussion = f"Thread Discussion: {forum_thread.mention}"
     thr_name = forum_thread.name
@@ -255,7 +264,7 @@ async def find_thread_scheduled_event(BOT, forum_thread):
                     try:
                         event = await BOT.guild.fetch_scheduled_event(event_id, with_counts=False)
                         return event
-                    except Exception as e:
-                        err_print(e)
+                    except:
+                        debug_print(f"No event found with {event_id}, keep searching")
 
     return None
