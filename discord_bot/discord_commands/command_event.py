@@ -183,7 +183,7 @@ async def add_event(BOT, ctx, forum_thread, scheduled_events, start_time, end_ti
             f"Event URL: {new_event.url}\n{thr_discussion}"
         )
     else:
-        return RESPONSE_ERR("Hmmm... I'm not able to create this event. Please reach out to Goose.")
+        return RESPONSE_ERR(f"Hmmm... I'm not able to create this event. Please reach out to {BOT.mod.global_name}.")
 
     return new_event.id
 
@@ -234,7 +234,7 @@ async def update_event(BOT, _, forum_thread, start_time, end_time):
     )
 
     if not edit_event.status == EventStatus.scheduled:
-        return RESPONSE_ERR("Hmmm... I'm not able to update this event. Please reach out to Goose.")
+        return RESPONSE_ERR(f"Hmmm... I'm not able to update this event. Please reach out to {BOT.mod.global_name}.")
 
     return event.id
 

@@ -35,7 +35,7 @@ async def cb_player(BOT, ctx, player_name, option=None, name_change=None):
     player_info = BOT.db.get_player_data(player_name)
     if is_add:
         if not player_info:
-            msg = f"Your request to add {player_name} has been submitted to Goose."
+            msg = f"Your request to add {player_name} has been submitted to {BOT.mod.global_name}."
             embed = request_submitted_embed(msg)
             send_msg_to_mod = True
         else:
@@ -43,20 +43,20 @@ async def cb_player(BOT, ctx, player_name, option=None, name_change=None):
     elif player_info is None: 
         embed = err_embed(f"Player {player_name} is not found in clan database")
     elif is_deleted:
-        msg = f"Your request to delete {player_name} has been submitted to Goose."
+        msg = f"Your request to delete {player_name} has been submitted to {BOT.mod.global_name}."
         embed = request_submitted_embed(msg)
         send_msg_to_mod = True
     elif req_rank_chlg:
         if sanitize_player_rank(player_info[ClanDatabase.RANK]) not in PlayerRankHandler.HONOR_RANKS:
             msg = f"Your request is denied, due to {player_name} not achieving the Honorable Ranks.\n" \
-                   "Please reach out to Goose if this is a mistake."
+                  f"Please reach out to {BOT.mod.global_name} if this is a mistake."
             embed = err_embed(msg, "Sorry")
         else:
-            msg = f"Your request for {player_name}'s ranking challenge has been submitted to Goose."
+            msg = f"Your request for {player_name}'s ranking challenge has been submitted to {BOT.mod.global_name}."
             embed = request_submitted_embed(msg)
             send_msg_to_mod = True
     elif req_name_change:
-        msg = f"Your request for RSN name change from {player_name} to {name_change} has been submitted to Goose."
+        msg = f"Your request for RSN name change from {player_name} to {name_change} has been submitted to {BOT.mod.global_name}."
         embed = request_submitted_embed(msg)
         send_msg_to_mod = True
     else:

@@ -2,7 +2,7 @@ import os
 import random as rand
 from argparse import ArgumentParser
 from dotenv import load_dotenv
-from discord import ClientException, Intents, utils as dutils, app_commands
+from discord import ClientException, Intents, utils as dutils, app_commands, Emoji
 from discord.ext import commands
 from clan_db import ClanDatabase
 from discord_bot import *
@@ -15,6 +15,7 @@ class TheDocksDiscordBot(commands.Bot):
     
     def __init__(self):
         self.cmd_prefix = "/"
+        self.allowed_role = os.getenv("OSRS_ROLE")
         self.__intents = self.__init_intents()
         super().__init__(self.cmd_prefix, intents=self.__intents)
     
@@ -41,7 +42,7 @@ class TheDocksDiscordBot(commands.Bot):
         self.mod = __discord_get_or_fail(self.guild.members, self.mod)
         self.forum_channel = __discord_get_or_fail(self.guild.channels, self.forum_channel)
         self.voice_channel = __discord_get_or_fail(self.guild.voice_channels, self.voice_channel)
-        self.members_role = __discord_get_or_fail(self.guild.roles, self.members_role)
+        self.allowed_role = __discord_get_or_fail(self.guild.roles, self.allowed_role)
 
         debug_print(f"guild({self.guild}), drop_channel({self.drop_channel}), general_channel({self.general_channel}), mod({self.mod}))")
 
@@ -59,10 +60,17 @@ class TheDocksDiscordBot(commands.Bot):
             else:
                 raise ClientException(f"Bot owner {self.mod} is not found!")
 
+    async def on_command_error(self, ctx, exception):
+        debug_print(f"Exception({ctx.author.name},{type(exception)}:{exception})")
+        if type(exception) == commands.CheckFailure:
+            message = await ctx.reply(embed=err_embed(f"Sorry, you must be a {BOT.allowed_role} in order to use my commands. " 
+                                                      f"If you are a {BOT.allowed_role}, reach out to {BOT.mod.global_name} to provide you the role.",
+                                                      "Well... this is awkward..."))
+            await message.add_reaction("🤣")
+
     def run(self, db, production=False):
         self.db = db
         self.mod = os.getenv("BOT_OWNER")
-        self.members_role = os.getenv("OSRS_ROLE")
 
         if production:
             self.guild = os.getenv("DISCORD_GUILD")
@@ -90,11 +98,19 @@ async def docks(ctx):
     embed = info_embed(":v", "Honk")
     await ctx.send(embed=embed, ephemeral=True, reference=ctx.message)
 
+@BOT.check
+async def check_allowed_role(ctx):
+    return BOT.allowed_role in ctx.author.roles
+
 """Command List"""
 @docks.command(name="sync")
 async def sync(ctx):
     await BOT.tree.sync()
     await ctx.send(f"Commands are synced to {str(BOT.guild)}", ephemeral=True)
+
+@docks.command(name="docs")
+async def docs(ctx):
+    await cb_docs(BOT, ctx)
 
 @docks.command(name="player")
 @app_commands.autocomplete(option=opt_player_autocompletion)
