@@ -14,7 +14,7 @@ MAX_OPTIONS_LEN = 20
 OSRS_FONT_SIZE = 20
 
 async def spin_cb(_, ctx, options, weights=None, randomize_weights=None, shuffle_options=None, options_detail=None):
-    val = validate_params(options, weights, randomize_weights)
+    val = validate_params(options, weights, randomize_weights, shuffle_options, options_detail)
     if not val:
         await ctx.send(embed=err_embed(val.err), ephemeral=True)
         return
@@ -28,12 +28,18 @@ async def spin_cb(_, ctx, options, weights=None, randomize_weights=None, shuffle
 
     await process_spin_images(ctx, opt_fields, weights, opt_len, options_detail)
 
-def validate_params(options, weights, randomize_weights):
+def validate_params(options, weights, randomize_weights, shuffle_options, options_details):
     if options is None:
         return RESPONSE_ERR("No options provided")
     
     if randomize_weights and randomize_weights not in RANDOM_WEIGHTS_OPTIONS:
-        return RESPONSE_ERR(f"Value for Randomized Weights Enabled [{randomize_weights}] is not True or False")
+        return RESPONSE_ERR(f"Value for Randomized Weights Enabled [{randomize_weights}] is not True")
+    
+    if shuffle_options and not shuffle_options == "True":
+        return RESPONSE_ERR(f"Value for Shuffle Options Enabled [{randomize_weights}] is not True")
+    
+    if options_details and not options_details == "True":
+        return RESPONSE_ERR(f"Value for Option Details Enabled [{options_details}] is not True")
         
     opts_fields = options.strip().split(",")
     opts_len = len(opts_fields)

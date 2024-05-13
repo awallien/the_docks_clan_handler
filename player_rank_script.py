@@ -127,6 +127,9 @@ class ClanRankScriptHandler(PromptRunner):
         new_rank = 0
         status = RESPONSE_OK
 
+        if type(player_rank) == str:
+            return status
+
         if player_rank in PlayerRankHandler.NEW_PLAYER_RANKS:
             if player_is_active:
                 new_rank = PlayerRankHandler.ACTIVENESS_RANK_3

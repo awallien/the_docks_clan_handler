@@ -3,8 +3,7 @@ from clan_db.clan_database import ClanDatabase
 from discord import Color, Embed, app_commands
 
 from util import debug_print, PlayerRankHandler, sanitize_player_rank
-from discord_bot.discord_bot_util import err_embed, get_rank_icon_url, info_embed, request_submitted_embed
-from player_rank_script import PlayerRankHandler
+from discord_bot.discord_bot_util import err_embed, get_rank_icon_url, request_submitted_embed
 
 OPTIONS = ["add", "delete", "detail", "request_rank_challenge"]
 

@@ -15,14 +15,18 @@ class TheDocksDiscordBot(commands.Bot):
     
     def __init__(self):
         self.cmd_prefix = "/"
+        self.__intents = self.__init_intents()
+        super().__init__(self.cmd_prefix, intents=self.__intents)
+    
+    def __init_intents(self):
         intents = Intents.all()
         intents.message_content = True
         intents.members = True
         intents.emojis_and_stickers = True
+        intents.guild_scheduled_events = True
         print(intents)
+        return intents
 
-        super().__init__(self.cmd_prefix, intents=intents)
-    
     def __init_discord_vars(self):
         def __discord_get_or_fail(iterable, name):
             res = dutils.get(iterable, name=name)
@@ -35,6 +39,9 @@ class TheDocksDiscordBot(commands.Bot):
         self.drop_channel = __discord_get_or_fail(self.guild.channels, self.drop_channel)
         self.general_channel = __discord_get_or_fail(self.guild.channels, self.general_channel)
         self.mod = __discord_get_or_fail(self.guild.members, self.mod)
+        self.forum_channel = __discord_get_or_fail(self.guild.channels, self.forum_channel)
+        self.voice_channel = __discord_get_or_fail(self.guild.voice_channels, self.voice_channel)
+        self.members_role = __discord_get_or_fail(self.guild.roles, self.members_role)
 
         debug_print(f"guild({self.guild}), drop_channel({self.drop_channel}), general_channel({self.general_channel}), mod({self.mod}))")
 
@@ -55,17 +62,22 @@ class TheDocksDiscordBot(commands.Bot):
     def run(self, db, production=False):
         self.db = db
         self.mod = os.getenv("BOT_OWNER")
+        self.members_role = os.getenv("OSRS_ROLE")
 
         if production:
             self.guild = os.getenv("DISCORD_GUILD")
             self.drop_channel = os.getenv("DROPS_CHANNEL")
             self.drop_webhook = os.getenv("DROPS_WEBHOOK")
             self.general_channel = os.getenv("GENERAL_CHANNEL")
+            self.forum_channel = os.getenv("FORUM_CHANNEL")
+            self.voice_channel = os.getenv("VOICE_CHANNEL")
         else:
-            self.guild = os.getenv("DISCORD_DEV_GUILD")
+            self.guild = os.getenv("DEV_DISCORD_GUILD")
             self.drop_channel = os.getenv("DEV_DROPS_CHANNEL")
             self.drop_webhook = os.getenv("DEV_DROPS_WEBHOOK")
             self.general_channel = os.getenv("DEV_GENERAL_CHANNEL")
+            self.forum_channel = os.getenv("DEV_FORUM_CHANNEL")
+            self.voice_channel = os.getenv("DEV_VOICE_CHANNEL")
         
         super().run(self.TOKEN)
 
@@ -82,7 +94,7 @@ async def docks(ctx):
 @docks.command(name="sync")
 async def sync(ctx):
     await BOT.tree.sync()
-    await ctx.send(f"Commands are synced to {str(BOT.guild)}")
+    await ctx.send(f"Commands are synced to {str(BOT.guild)}", ephemeral=True)
 
 @docks.command(name="player")
 @app_commands.autocomplete(option=opt_player_autocompletion)
@@ -105,6 +117,12 @@ async def spin(ctx,
                shuffle_options:str=None,
                options_detail:str=None):
     await spin_cb(BOT, ctx, options, weights, randomize_weights, shuffle_options, options_detail)
+
+@docks.command(name="event")
+@app_commands.autocomplete(option=option_event_autocompletion,
+                           timezone=timezone_event_autocompletion)
+async def event(ctx, option, start_time:str=None, end_time:str=None, timezone:str=None):
+    await event_cb(BOT, ctx, option, start_time, end_time, timezone)
 
 if __name__ == "__main__":
     parser = ArgumentParser(
