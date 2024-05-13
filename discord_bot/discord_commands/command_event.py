@@ -56,7 +56,9 @@ def validate_date_times(option, start_time, end_time, tzone):
         if (start_time or end_time) and not tzone:
             return RESPONSE_ERR("Please provide `timezone` when updating `start_time` or `end_time`.")
         
-        tz = ZoneInfo(TZ_OPTIONS[tz])
+        if tzone:
+            tz = ZoneInfo(TZ_OPTIONS[tzone])
+        
         parse_str = "start_time"
         try:
             if start_time:
@@ -93,7 +95,6 @@ async def event_cb(BOT, ctx, option, start_time, end_time, tzone):
         """
         The API to fetch the guild's event takes forever, so send a message in the meantime and update it later
         """
-        print(EVENTS_SET)
         if forum_thread.id in EVENTS_SET:
             await ctx.send(embed=err_embed(msg="A previous executed event command is in progress. Please wait until it is done before executing a new event command.", 
                                            title="Woah there!"))
@@ -115,7 +116,7 @@ async def event_cb(BOT, ctx, option, start_time, end_time, tzone):
                 err = err_embed(f"{res.err}", "Something went wrong")
                 await reply_msg.edit(embeds=[err])
             else:
-                success = info_embed(f"{OPTIONS_TO_MSG[option][1]}\nEvent ID: {res}", f"Success!")
+                success = info_embed(f"{OPTIONS_TO_MSG[option][1]}\nEvent ID: {res}\nDO NOT DELETE THIS MESSAGE!", f"Success!")
                 await reply_msg.edit(embeds=[success])
         except Exception as e:
             err_print(str(e))
@@ -146,9 +147,8 @@ async def add_event(BOT, ctx, forum_thread, scheduled_events, start_time, end_ti
     thr_message = await forum_thread.fetch_message(forum_thread.id)
     thr_content = thr_message.content
 
-    event_id = await find_thread_event_id(BOT, forum_thread)
-    print(event_id)
-    if event_id:
+    sch_event = await find_thread_scheduled_event(BOT, forum_thread)
+    if sch_event:
         return RESPONSE_ERR(f"Hmmm... it appears there's already an event created for this thread forum, Event ID: {event_id}")
     
     event = check_event_exists(thr_name, thr_content, scheduled_events)
@@ -192,17 +192,43 @@ async def delete_event(BOT, ctx):
      1.   fetch the event that was created within the forum thread and delete it
     """
 
-async def update_event(BOT, ctx, forum_thread):
+async def update_event(BOT, _, forum_thread, start_time, end_time):
     """
     When user requests to update event:
      1. get updated start and end time, if any
      2. get thread name, content, image, and start and end times
-     3. get Thread ID
+     3. Update the event
     """
+    event = await find_thread_scheduled_event(BOT, forum_thread)
+    if not event:
+        return RESPONSE_ERR("Hmmm... it looks like I can't find the event id in this forum thread. Did you delete it by accident?")
 
-    event_id = await find_thread_event_id(BOT, forum_thread)
-    if not event_id:
-        await ctx.send(embed=err_embed("Hmmm... it looks like I can't find the event id in this forum thread. Did you delete it by accident?"))
+    thr_discussion = f"Thread Discussion: {forum_thread.mention}"
+    thr_name = forum_thread.name
+    thr_message = await forum_thread.fetch_message(forum_thread.id)
+    thr_content = thr_message.content
+    
+    thr_image = None
+    if thr_message.attachments:
+        thr_att = thr_message.attachments[0]
+        thr_image = await thr_att.read()
+
+    ev_start_time = event.start_time
+    ev_end_time = event.end_time
+
+    edit_event = await event.edit(
+        name=thr_name,
+        description=thr_content + f"\n\n{thr_discussion}",
+        start_time=start_time if start_time else ev_start_time,
+        end_time=end_time if end_time else ev_end_time,
+        image=thr_image
+    )
+
+    if not edit_event.status == EventStatus.scheduled:
+        return RESPONSE_ERR("Hmmm... I'm not able to update this event. Please reach out to Goose.")
+
+    return event.id
+
 
 def check_event_exists(thr_name, thr_content, scheduled_events):
     """
@@ -218,21 +244,18 @@ def check_event_exists(thr_name, thr_content, scheduled_events):
             return event.name
     return None
 
-async def find_thread_event_id(BOT, forum_thread):
+async def find_thread_scheduled_event(BOT, forum_thread):
     async for message in forum_thread.history(limit=None):
-        print(message)
         if message.author.name == BOT.user.display_name:
             if len(message.embeds) == 1:
                 desc = message.embeds[0].description
-                print(desc)
                 match = re.search(r"Event ID:\s*(\d+)", desc)
-                print(match)
                 if match:
                     event_id = int(match.group(1))
                     try:
-                        await BOT.guild.fetch_scheduled_event(event_id, with_counts=False)
-                        return event_id
+                        event = await BOT.guild.fetch_scheduled_event(event_id, with_counts=False)
+                        return event
                     except Exception as e:
                         err_print(e)
 
-                return None
+    return None
