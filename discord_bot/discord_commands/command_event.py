@@ -4,10 +4,13 @@ import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from discord import app_commands, Thread, EntityType, PrivacyLevel, EventStatus
+
 from discord_bot import err_embed, info_embed
-from util import RESPONSE_ERR, RESPONSE_OK, err_print, debug_print
+from util import RESPONSE_ERR, err_print, debug_print
+
 
 OPTIONS = ["add", "update", "delete"]
+
 
 TZ_OPTIONS = {
     "PST/USA":  "America/Los_Angeles",
@@ -18,13 +21,16 @@ TZ_OPTIONS = {
     "CET/NL":   "Europe/Brussels"
 }
 
+
 OPTIONS_TO_MSG = {
     "add": ["Adding event...", "Add event completed"],
     "update": ["Updating event...", "Update event completed"],
     "delete": ["Deleting event...", "Delete event completed"],
 }
 
+
 EVENTS_SET = set()
+
 
 def validate_date_times(option, start_time, end_time, tzone):
     format_str = "%m-%d-%Y %I:%M %p"
@@ -44,46 +50,42 @@ def validate_date_times(option, start_time, end_time, tzone):
         except ValueError:
             return RESPONSE_ERR(f"`{parse_str}` is NOT in a valid format. Expecting [MM-DD-YYYY HH:MM AM/PM]")
         
-        if start_time <= datetime.now(tz=tz):
+        dt_now = datetime.now(tz=tz)
+
+        if start_time <= dt_now:
             return RESPONSE_ERR("`start_time` cannot occur in the past.")
         if end_time:
-            if end_time <= datetime.now(tz=tz):
+            if end_time <= dt_now:
                 return RESPONSE_ERR("`end_time` cannot occur in the past.")
             if end_time <= start_time:
-                return RESPONSE_ERR("`end_time` cannot occur or be the same as `start_time`.")
+                return RESPONSE_ERR("`end_time` cannot be the same as or occur before `start_time`.")
     
     elif option == "update":
         if (start_time or end_time) and not tzone:
             return RESPONSE_ERR("Please provide `timezone` when updating `start_time` or `end_time`.")
         
-        if tzone:
-            tz = ZoneInfo(TZ_OPTIONS[tzone])        
-            parse_str = "start_time"
-            try:
-                if start_time:
-                    start_time = datetime.strptime(start_time, format_str).replace(tzinfo=tz)
-                parse_str = "end_time"
-                if end_time:
-                    end_time = datetime.strptime(end_time, format_str).replace(tzinfo=tz)
-            except ValueError:
-                return RESPONSE_ERR(f"`{parse_str}` is NOT in a valid format. Expecting [MM-DD-YYYY HH:MM AM/PM]")
-    else:
+        tz = ZoneInfo(TZ_OPTIONS[tzone])        
+        parse_str = "start_time"
+        try:
+            if start_time:
+                start_time = datetime.strptime(start_time, format_str).replace(tzinfo=tz)
+            parse_str = "end_time"
+            if end_time:
+                end_time = datetime.strptime(end_time, format_str).replace(tzinfo=tz)
+        except ValueError:
+            return RESPONSE_ERR(f"`{parse_str}` is NOT valid or in a valid format. Expecting [MM-DD-YYYY HH:MM AM/PM]")
+    else: # delete
         if any([start_time, end_time, tzone]):
             return RESPONSE_ERR(f"No need to set any time parameters when deleting an event")
 
     return (start_time, end_time)
+
 
 async def event_cb(BOT, ctx, option, start_time, end_time, tzone):
     if option not in OPTIONS:
         await ctx.send(embed=err_embed(f"{option} is not a valid option!"), ephemeral=True)
         return
     
-    valid_times = validate_date_times(option, start_time, end_time, tzone)
-    if not valid_times:
-        await ctx.send(embed=err_embed(msg=valid_times.err))
-        return
-
-    start_time,end_time = valid_times
     forum_thread = ctx.channel
     
     if not type(forum_thread) == Thread or \
@@ -103,28 +105,37 @@ async def event_cb(BOT, ctx, option, start_time, end_time, tzone):
             return
 
         EVENTS_SET.add(forum_thread.id)
-
         try:
             reply_msg = await ctx.send(embed=info_embed("Please wait for this message to be updated", f"_{OPTIONS_TO_MSG[option][0]}_"))
-            
+
+            valid_times = validate_date_times(option, start_time, end_time, tzone)
+            if not valid_times:
+                await reply_msg.edit(embed=err_embed(msg=valid_times.err))
+                raise Exception(valid_times.err)
+
+            start_time,end_time = valid_times
+
             if option == "add":
                 scheduled_events = await BOT.guild.fetch_scheduled_events()
                 res = await add_event(BOT, ctx, forum_thread, scheduled_events, start_time, end_time)
             elif option == "update":
                 res = await update_event(BOT, ctx, forum_thread, start_time, end_time)
-            else:
+            else: # delete
                 res = await delete_event(BOT, ctx, forum_thread)
+            
             if not res:
                 err = err_embed(f"{res.err}", "Something went wrong")
                 await reply_msg.edit(embeds=[err])
             else:
                 success = info_embed(f"{OPTIONS_TO_MSG[option][1]}\nEvent ID: {res}\nDO NOT DELETE THIS MESSAGE!", f"Success!")
                 await reply_msg.edit(embeds=[success])
+        
         except Exception as e:
             err_print(f"Error caught in {option}: {str(e)}")
         
         if forum_thread.id in EVENTS_SET:
             EVENTS_SET.remove(forum_thread.id)
+
 
 async def option_event_autocompletion(_, current):
     return [
@@ -132,11 +143,13 @@ async def option_event_autocompletion(_, current):
         for option in OPTIONS if current.lower() in option.lower()
     ]
 
+
 async def timezone_event_autocompletion(_, current):
     return [
         app_commands.Choice(name=option, value=option)
         for option in TZ_OPTIONS.keys() if current.lower() in option.lower()
     ]
+
 
 async def add_event(BOT, ctx, forum_thread, scheduled_events, start_time, end_time):
     """
@@ -179,16 +192,16 @@ async def add_event(BOT, ctx, forum_thread, scheduled_events, start_time, end_ti
 
     if new_event.status == EventStatus.scheduled:
         await BOT.general_channel.send(
-            f"{BOT.members_role.mention} {ctx.author.mention} created an event, check it out!\n"
+            f"{BOT.allowed_role.mention} {ctx.author.mention} created an event, check it out!\n"
             f"Event URL: {new_event.url}\n{thr_discussion}"
         )
     else:
-        return RESPONSE_ERR(f"Hmmm... I'm not able to create this event. Please reach out to {BOT.mod.global_name}.")
+        return RESPONSE_ERR(f"Hmmm... I'm not able to create this event. {BOT.mod.mention}, help!")
 
     return new_event.id
 
 
-async def delete_event(BOT, ctx, forum_thread):
+async def delete_event(BOT, _, forum_thread):
     """
     When user requests to delete event:
      1.   fetch the event that was created within the forum thread and delete it
@@ -198,8 +211,14 @@ async def delete_event(BOT, ctx, forum_thread):
         return RESPONSE_ERR("Hmmm... I can't find a valid event ID in this forum thread. Did you delete it by accident?")
 
     event_id = event.id
-    await event.delete()
+    
+    try:
+        await event.delete()
+    except:
+        return RESPONSE_ERR(f"Hmmm... I wasn't able to delete the event. {BOT.mention}, help!")
+    
     return event_id
+
 
 async def update_event(BOT, _, forum_thread, start_time, end_time):
     """
@@ -225,16 +244,19 @@ async def update_event(BOT, _, forum_thread, start_time, end_time):
     ev_start_time = event.start_time
     ev_end_time = event.end_time
 
-    edit_event = await event.edit(
-        name=thr_name,
-        description=thr_content + f"\n\n{thr_discussion}",
-        start_time=start_time if start_time else ev_start_time,
-        end_time=end_time if end_time else ev_end_time,
-        image=thr_image
-    )
+    try:
+        edit_event = await event.edit(
+            name=thr_name,
+            description=thr_content + f"\n\n{thr_discussion}",
+            start_time=start_time if start_time else ev_start_time,
+            end_time=end_time if end_time else ev_end_time,
+            image=thr_image
+        )
+    except Exception as e:
+        return RESPONSE_ERR(str(e))
 
     if not edit_event.status == EventStatus.scheduled:
-        return RESPONSE_ERR(f"Hmmm... I'm not able to update this event. Please reach out to {BOT.mod.global_name}.")
+        return RESPONSE_ERR(f"Hmmm... I'm not able to update this event. {BOT.mod.mention}, help!")
 
     return event.id
 
@@ -252,6 +274,7 @@ def check_event_exists(thr_name, thr_content, scheduled_events):
         if td.cosine(thr_name_lst, ev_name) > 0.25 or td.cosine(thr_content_lst, ev_desc) > 0.5:
             return event.name
     return None
+
 
 async def find_thread_scheduled_event(BOT, forum_thread):
     async for message in forum_thread.history(limit=None):
