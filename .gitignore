@@ -1,3 +1,6 @@
 .env
 cache_db.csv
 __pycache__
+activities.py
+skills.py
+bosses.py

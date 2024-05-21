@@ -7,3 +7,5 @@ io
 random
 asyncio
 textdistance
+requests
+pathlib
