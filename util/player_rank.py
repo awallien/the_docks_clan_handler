@@ -1,5 +1,5 @@
 import heapq
-from osrs_api import Hiscores, const
+from util.osrs_api import *
 
 class PlayerRankHandler:
     """Handles Rank Calculations for a clan member"""
@@ -16,8 +16,8 @@ class PlayerRankHandler:
     HONOR_RANKS = [11, 12, 13, 14] + MOD_RANKS
 
     def __init__(self, player) -> None:
-        assert(isinstance(player, Hiscores))
-        self.player: Hiscores = player
+        assert(isinstance(player, Hiscore))
+        self.player: Hiscore = player
 
     def get_new_player_rank(self):
         max_levels_info = self.get_max_levels_info()
@@ -28,11 +28,11 @@ class PlayerRankHandler:
     def get_max_levels_info(self):
         skills = {"combat": {}, "other": {}}
 
-        for skill_name,skill_obj in self.player.skills.items():
-            if skill_name in self.CMB_SKILLS:
-                skills["combat"][skill_name] = skill_obj.level
-            elif skill_name != "hitpoints":
-                skills["other"][skill_name] = skill_obj.level
+        for skill in SKILLS:
+            if skill in self.CMB_SKILLS:
+                skills["combat"][skill] = self.player.skills.get(skill).level
+            elif skill != "hitpoints":
+                skills["other"][skill] = self.player.skills.get(skill).level
 
         melee_lvls = [(name,skills["combat"][name]) for name in self.MELEE_CMB_SKILLS]
         melee_max_lvl = max(melee_lvls, key=lambda x: x[1])
@@ -57,7 +57,7 @@ class PlayerRankHandler:
     @classmethod
     def player_hiscore_get(cls, player):
         try:
-            p_hiscore = Hiscores(player, const.AccountType.NORMAL)
+            p_hiscore = Hiscore(player, AccountTypes.NORMAL)
             return p_hiscore
         except Exception as e:
             return None

@@ -1,8 +1,7 @@
 import os
-import random as rand
 from argparse import ArgumentParser
 from dotenv import load_dotenv
-from discord import ClientException, Intents, utils as dutils, app_commands, Emoji
+from discord import ClientException, Intents, utils as dutils, app_commands
 from discord.ext import commands
 from clan_db import ClanDatabase
 from discord_bot import *
