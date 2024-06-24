@@ -21,7 +21,8 @@ class ClanRankScriptHandler(PromptRunner):
             "updatedb": PromptArgs("updatedb", self.cb_update_db, "update all players' info in db"),
             "dumpdb": PromptArgs("dumpdb", self.cb_dump_db, "dump cache db", opt_params=["rank"]),
             "dumpplayer": PromptArgs("dumpplayer", self.cb_dump_player, "dump one player in db", ["player"]),
-            "updatedbplayer": PromptArgs("updatedbplayer", self.cb_update_db_player, "do one update on player in db", ["player"])
+            "updatedbplayer": PromptArgs("updatedbplayer", self.cb_update_db_player, "do one update on player in db", ["player"]),
+            "playerstat": PromptArgs("playerstat", self.cb_dump_player_stat, "dump player stat from Hiscore", ["player"])
         }
 
         super().__init__(self.cmds, banner=self.banner)
@@ -200,6 +201,17 @@ class ClanRankScriptHandler(PromptRunner):
                 member_db_data = self.clan_db.get_player_data(member)
 
         return RESPONSE_OK
+    
+    @default_response_ok
+    def cb_dump_player_stat(self, args):
+        player = args.player
+        player_hs = PlayerRankHandler.player_hiscore_get(player)
+        if player_hs is None:
+            print(f"No hiscore for {player}")
+        else:
+            for skill in SKILLS:
+                print(f"{skill}: {player_hs.skills.get(skill).level}")
+
 
 if __name__ == "__main__":
     parser = ArgumentParser(

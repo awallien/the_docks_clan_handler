@@ -113,13 +113,13 @@ async def docs(ctx):
 
 @docks.command(name="player")
 @app_commands.autocomplete(option=opt_player_autocompletion)
-async def player(ctx, player_name, option:str=None, name_change:str=None):
-    await cb_player(BOT, ctx, player_name, option, name_change)
+async def player(ctx, player_name, option:str=None, new_name:str=None):
+    await cb_player(BOT, ctx, player_name, option, new_name)
 
 @docks.command(name="drops")
 @app_commands.autocomplete(days=days_drops_autocompletion)
-async def drops(ctx, days=30):
-    await cb_drops(BOT, ctx, days)
+async def drops(ctx, days=30, member:str=None):
+    await cb_drops(BOT, ctx, days, member)
 
 @docks.command(name="spin")
 @app_commands.autocomplete(randomize_weights=set_true_autocompletion,
@@ -136,8 +136,8 @@ async def spin(ctx,
 @docks.command(name="event")
 @app_commands.autocomplete(option=option_event_autocompletion,
                            timezone=timezone_event_autocompletion)
-async def event(ctx, option, start_time:str=None, end_time:str=None, timezone:str=None):
-    await event_cb(BOT, ctx, option, start_time, end_time, timezone)
+async def event(ctx, option, start_datetime:str=None, end_datetime:str=None, timezone:str=None):
+    await event_cb(BOT, ctx, option, start_datetime, end_datetime, timezone)
 
 if __name__ == "__main__":
     parser = ArgumentParser(

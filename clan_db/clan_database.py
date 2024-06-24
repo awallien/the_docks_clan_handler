@@ -91,7 +91,12 @@ class ClanDatabase:
             if header not in self.db.columns:
                 self.db[header] = np.nan
                 self.db[header].fillna(0, inplace=True)
+        
+        self.__sort_db()
         self.save_to_cache()
+
+    def __sort_db(self):
+        self.db = self.db.sort_values(by=ClanDatabase.MEMBER, key=lambda col: col.str.lower())
 
     def append_file_to_cache(self, data_file):
         if not pathlib.Path(data_file).is_file():
@@ -142,7 +147,8 @@ class ClanDatabase:
 
         new_player_data_df = pd.DataFrame([new_player_data])
         self.db = pd.concat([self.db, new_player_data_df], ignore_index=True)
-        
+        self.__sort_db()
+            
         return RESPONSE_OK
 
     def update_player(self, player, new_name=None, new_rank=None, total_xp=None, new_parent=None, active_cnt=None, rank_challenge_attempt=None):
@@ -152,6 +158,7 @@ class ClanDatabase:
         if new_name:
             self.db.loc[self.db.Member == player, self.MEMBER] = new_name
             debug_print(f"Update {player} to new name {new_name}")
+            self.__sort_db()
             player = new_name
         if new_rank:
             self.db.loc[self.db.Member == player, self.RANK] = new_rank
@@ -183,6 +190,7 @@ class ClanDatabase:
             return RESPONSE_ERR(f"Player name {player} does not exist in clan")
         
         self.db = self.db[self.db[self.MEMBER] != player]
+        self.__sort_db()
 
         return RESPONSE_OK
 
