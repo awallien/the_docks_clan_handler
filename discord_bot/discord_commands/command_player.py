@@ -5,7 +5,7 @@ from discord import Color, Embed, app_commands
 from util import debug_print, PlayerRankHandler, sanitize_player_rank
 from discord_bot.discord_bot_util import err_embed, get_rank_icon_url, request_submitted_embed
 
-OPTIONS = ["add", "delete", "detail", "request_rank_challenge"]
+OPTIONS = ["add", "delete", "detail", "request_name_change", "request_rank_challenge"]
 
 async def cb_player(BOT, ctx, player_name, option=None, name_change=None):   
     if option and option not in OPTIONS:
@@ -26,10 +26,10 @@ async def cb_player(BOT, ctx, player_name, option=None, name_change=None):
         is_detailed = True
     elif option == "request_rank_challenge":
         req_rank_chlg = True
-    elif name_change is not None:
+    elif option == "request_name_change":
         req_name_change = True
 
-    debug_print(f"option: add({is_add}) delete({is_deleted}) detail({is_detailed}))")
+    debug_print(f"option: add({is_add}) delete({is_deleted}) detail({is_detailed}) request_name_change({req_name_change}))")
 
     msg = ""
     player_info = BOT.db.get_player_data(player_name)
@@ -39,9 +39,9 @@ async def cb_player(BOT, ctx, player_name, option=None, name_change=None):
             embed = request_submitted_embed(msg)
             send_msg_to_mod = True
         else:
-            embed = err_embed(f"{player_name} already exists in clan")
+            embed = err_embed(f"{player_name} already exists in the clan.")
     elif player_info is None: 
-        embed = err_embed(f"Player {player_name} is not found in clan database")
+        embed = err_embed(f"{player_name} is not found in clan database.")
     elif is_deleted:
         msg = f"Your request to delete {player_name} has been submitted to {BOT.mod.global_name}."
         embed = request_submitted_embed(msg)
@@ -56,9 +56,12 @@ async def cb_player(BOT, ctx, player_name, option=None, name_change=None):
             embed = request_submitted_embed(msg)
             send_msg_to_mod = True
     elif req_name_change:
-        msg = f"Your request for RSN name change from {player_name} to {name_change} has been submitted to {BOT.mod.global_name}."
-        embed = request_submitted_embed(msg)
-        send_msg_to_mod = True
+        if name_change is None:
+            embed = err_embed(f"`new_name` is not specified and is required for this command.")
+        else:    
+            msg = f"Your request for RSN name change from {player_name} to {name_change} has been submitted to {BOT.mod.global_name}."
+            embed = request_submitted_embed(msg)
+            send_msg_to_mod = True
     else:
         embed = make_player_info_embed(player_name, player_info, is_detailed)
     
@@ -100,7 +103,7 @@ def make_player_info_embed(p_name, p_info, is_detailed):
 
         if total_xp < 0:
             total_xp = "**-1xp"
-            footer_note = "**Total XP is not available in OSRS Hiscores since last clan rank update"
+            footer_note = "**Total XP is not available in OSRS Hiscores since last clan rank update, or clan member has just joined the clan"
         else:
             total_xp = int(total_xp)
 

@@ -30,23 +30,27 @@ def get_drop_embed_info(embed: Embed):
 
     return info
 
-async def cb_drops(BOT, ctx, days=30):
+async def cb_drops(BOT, ctx, days=30, player=None):
     if days not in VALID_DAYS:
-        await ctx.send(f"Error: invalid input for days ({days})")
+        await ctx.send(f"Error: invalid input for days ({days})", ephemeral=True)
+        return
+    
+    if player and player not in BOT.db.get_members():
+        await ctx.send(f"Error: member '{player}' not found in clan database")
         return
 
     dtime_days = (datetime.now() - timedelta(days=days)).replace(tzinfo=timezone.utc)
     
     players_drops = dict() # {K:name, V:{"Total GP":<int> "items":{"item <str>": {"value":<int>,"count":<int>}}, "MVD_item": <str|None>}
     message_cnt = 1
-    async for message in BOT.drop_channel.history(after=dtime_days, oldest_first=True):
+    async for message in BOT.drop_channel.history(after=dtime_days, oldest_first=False, limit=None):
         if message.author.name == BOT.drop_webhook:
             if message.embeds:
                 debug_print(f"message {message_cnt}")
                 message_cnt += 1
                 for embed in message.embeds:
                     info = get_drop_embed_info(embed)
-                    if info is None:
+                    if info is None or (player and player != info.player):
                         break
                     
                     debug_print(f"{info.player}, {info.quantity}, {info.item}, {info.value}")
@@ -70,7 +74,7 @@ async def cb_drops(BOT, ctx, days=30):
                     if (mvd_item is None) or (drops_item["value"] > player_drops_info["items"][mvd_item]["value"]):
                         player_drops_info["MVD_item"] = info.item
     
-    embed = make_drops_embed(BOT.drop_webhook, days, players_drops)
+    embed = make_drops_embed(BOT.drop_webhook, days, players_drops, player)
     await ctx.send(embed=embed, reference=ctx.message)
 
 async def days_drops_autocompletion(_, current):
@@ -87,11 +91,15 @@ def mvd_percentage(total_gp, mvd_value):
         perc = mvd_value / total_gp
     return f"{perc * 100:.2f}%"
 
-def make_drops_embed(drop_wh_name, days, players_drops):
+def make_drops_embed(drop_wh_name, days, players_drops, player_only=None):
+    player_desc = ""
+    if player_only:
+        player_desc = f"for _{player_only}_"
+    
     embed = Embed(
         title=f"{days}-Day \"{drop_wh_name}\" Drop Archive",
         color=Color.blue(),
-        description=f"I gathered the drops of The Docks Clan for the past {days} days. Here is what I collected:",
+        description=f"I gathered the drops of The Docks Clan for the past {days} days {player_desc}. Here is what I collected:",
     )
 
     embed.set_thumbnail(url="https://oldschool.runescape.wiki/images/Coins_10000.png?7fa38")
@@ -99,20 +107,23 @@ def make_drops_embed(drop_wh_name, days, players_drops):
                             "If you don't see your drops in the table above, then your plugin is all screwed up, and I can't properly parse your drops. "
                             "Please fix your plugin setup ASAP, if you want, or reach out to a fellow clan member to help you out.")
     
-    for player in players_drops:
-        drops_info = players_drops[player]
-        total_gp = drops_info["Total GP"]
-        mvd_item = drops_info["MVD_item"]
-        mvd_info = drops_info["items"][mvd_item]
-        mvd_value = mvd_info["value"]
-        mvd_count = mvd_info["count"]
+    if len(players_drops) == 0:
+        embed.add_field(name="", value="**No data found :(**")
+    else:
+        for player in players_drops:
+            drops_info = players_drops[player]
+            total_gp = drops_info["Total GP"]
+            mvd_item = drops_info["MVD_item"]
+            mvd_info = drops_info["items"][mvd_item]
+            mvd_value = mvd_info["value"]
+            mvd_count = mvd_info["count"]
 
-        embed.add_field(name=player, 
-                        value=f"> **Accumulated GP**:              {format(total_gp, ',')}\n"
-                              f"> **Number of Unique Drops**:      {len(drops_info['items'])}\n"
-                              f"> **Most Valuable Drop (MVD)**:    {mvd_count}x {mvd_item}\n"
-                              f"> **MVD Value**:                   {format(mvd_value, ',')}\n"
-                              f"> **MVD Percentage¹**:             {mvd_percentage(total_gp, mvd_value)}",
-                        inline=False)
+            embed.add_field(name=player, 
+                            value=f"> **Accumulated GP**:                   {format(total_gp, ',')}\n"
+                                f"> **Number of Unique Drops**:             {len(drops_info['items'])}\n"
+                                f"> **Most Valuable Drop (MVD)**:           {mvd_count}x {mvd_item}\n"
+                                f"> **MVD Value**:                          {format(mvd_value, ',')}\n"
+                                f"> **MVD Percentage¹**:                    {mvd_percentage(total_gp, mvd_value)}",
+                            inline=False)
 
     return embed

@@ -1,7 +1,7 @@
 import textdistance as td
 import re
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from discord import app_commands, Thread, EntityType, PrivacyLevel, EventStatus
 
@@ -9,7 +9,7 @@ from discord_bot import err_embed, info_embed
 from util import RESPONSE_ERR, err_print, debug_print
 
 
-OPTIONS = ["add", "update", "delete"]
+OPTIONS = ["add", "update", "delete", "notify"]
 
 
 TZ_OPTIONS = {
@@ -26,26 +26,26 @@ OPTIONS_TO_MSG = {
     "add": ["Adding event...", "Add event completed"],
     "update": ["Updating event...", "Update event completed"],
     "delete": ["Deleting event...", "Delete event completed"],
+    "notify": ["Notifying event...", "Notify event completed"],
 }
 
 
 EVENTS_SET = set()
 
-
 def validate_date_times(option, start_time, end_time, tzone):
     format_str = "%m-%d-%Y %I:%M %p"
     if option == "add":
         if start_time is None:
-            return RESPONSE_ERR("`start_time` is mandatory when creating a new event.")
+            return RESPONSE_ERR("`start_datetime` is mandatory when creating a new event.")
         if tzone is None or tzone not in TZ_OPTIONS:
             return RESPONSE_ERR("A valid `timezone` is mandatory when creating a new event.")
 
         tz = ZoneInfo(TZ_OPTIONS[tzone])
-        parse_str = "start_time"
+        parse_str = "start_datetime"
         try:
             start_time = datetime.strptime(start_time, format_str).replace(tzinfo=tz)
             if end_time is not None:
-                parse_str = "end_time"
+                parse_str = "end_datetime"
                 end_time = datetime.strptime(end_time, format_str).replace(tzinfo=tz)
         except ValueError:
             return RESPONSE_ERR(f"`{parse_str}` is NOT in a valid format. Expecting [MM-DD-YYYY HH:MM AM/PM]")
@@ -53,30 +53,30 @@ def validate_date_times(option, start_time, end_time, tzone):
         dt_now = datetime.now(tz=tz)
 
         if start_time <= dt_now:
-            return RESPONSE_ERR("`start_time` cannot occur in the past.")
+            return RESPONSE_ERR("`start_datetime` cannot occur in the past.")
         if end_time:
             if end_time <= dt_now:
-                return RESPONSE_ERR("`end_time` cannot occur in the past.")
+                return RESPONSE_ERR("`end_datetime` cannot occur in the past.")
             if end_time <= start_time:
-                return RESPONSE_ERR("`end_time` cannot be the same as or occur before `start_time`.")
+                return RESPONSE_ERR("`end_datetime` cannot be the same as or occur before `start_datetime`.")
     
     elif option == "update":
-        if (start_time or end_time) and not tzone:
-            return RESPONSE_ERR("Please provide `timezone` when updating `start_time` or `end_time`.")
+        if (start_time or end_time) and (not tzone or tzone not in TZ_OPTIONS):
+            return RESPONSE_ERR("Please provide a valid `timezone` when updating `start_datetime` or `end_datetime`.")
         
         tz = ZoneInfo(TZ_OPTIONS[tzone])        
-        parse_str = "start_time"
+        parse_str = "start_datetime"
         try:
             if start_time:
                 start_time = datetime.strptime(start_time, format_str).replace(tzinfo=tz)
-            parse_str = "end_time"
+            parse_str = "end_datetime"
             if end_time:
                 end_time = datetime.strptime(end_time, format_str).replace(tzinfo=tz)
         except ValueError:
             return RESPONSE_ERR(f"`{parse_str}` is NOT valid or in a valid format. Expecting [MM-DD-YYYY HH:MM AM/PM]")
-    else: # delete
+    else: # delete, notify
         if any([start_time, end_time, tzone]):
-            return RESPONSE_ERR(f"No need to set any time parameters when deleting an event")
+            return RESPONSE_ERR(f"No need to set any time parameters when deleting/notifying an event")
 
     return (start_time, end_time)
 
@@ -120,8 +120,10 @@ async def event_cb(BOT, ctx, option, start_time, end_time, tzone):
                 res = await add_event(BOT, ctx, forum_thread, scheduled_events, start_time, end_time)
             elif option == "update":
                 res = await update_event(BOT, ctx, forum_thread, start_time, end_time)
-            else: # delete
+            elif option == "delete":
                 res = await delete_event(BOT, ctx, forum_thread)
+            else:
+                res = await notify_event(BOT, forum_thread) # notify
             
             if not res:
                 err = err_embed(f"{res.err}", "Something went wrong")
@@ -169,7 +171,7 @@ async def add_event(BOT, ctx, forum_thread, scheduled_events, start_time, end_ti
     event = check_event_exists(thr_name, thr_content, scheduled_events)
     if event:
         return RESPONSE_ERR(f"Hmmm... it appears there's a similar event already existing,\nEvent: {event}. \n"
-                             "If they are not the same, please reword your thread.")
+                             "If they are not the same, please reword your event thread.")
 
     thr_discussion = f"Thread Discussion: {forum_thread.mention}"
     thr_image = None
@@ -215,7 +217,7 @@ async def delete_event(BOT, _, forum_thread):
     try:
         await event.delete()
     except:
-        return RESPONSE_ERR(f"Hmmm... I wasn't able to delete the event. {BOT.mention}, help!")
+        return RESPONSE_ERR(f"Hmmm... I wasn't able to delete this event. {BOT.mention}, help!")
     
     return event_id
 
@@ -260,6 +262,36 @@ async def update_event(BOT, _, forum_thread, start_time, end_time):
 
     return event.id
 
+async def notify_event(BOT, forum_thread):
+    event = await find_thread_scheduled_event(BOT, forum_thread)
+    if not event:
+        return RESPONSE_ERR("Hmmm... I can't find a valid event ID in this forum thread. Did you delete it by accident?")
+    
+    event_name = event.name
+    ev_datetime_diff = event.start_time.replace(tzinfo=None) - datetime.now()
+    print(ev_datetime_diff, ":::", ev_datetime_diff.total_seconds())
+    event_starts_in = ""
+
+    if ev_datetime_diff > timedelta(weeks=1):
+        return RESPONSE_ERR("Sorry, I can only begin notifying an event a week before the event starts.")
+    
+    if ev_datetime_diff.total_seconds() <= 0:
+        event_starts_in = f"has just started!"
+    else:
+        days = ev_datetime_diff.days
+        seconds = ev_datetime_diff.seconds
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        seconds %= 60
+        event_starts_in = f"is starting in {days} days, {hours} hours, {minutes} minutes, and {seconds} seconds!"
+        
+    await BOT.general_channel.send(
+        f"Just a reminder {BOT.allowed_role.mention}, Event '{event_name}' {event_starts_in}\n"
+        f"More info about this event is found here: {forum_thread.mention}\n"
+        f"{event.url}"
+    )
+    
+    return event.id
 
 def check_event_exists(thr_name, thr_content, scheduled_events):
     """
@@ -277,7 +309,7 @@ def check_event_exists(thr_name, thr_content, scheduled_events):
 
 
 async def find_thread_scheduled_event(BOT, forum_thread):
-    async for message in forum_thread.history(limit=None):
+    async for message in forum_thread.history(limit=None, oldest_first=False):
         if message.author.name == BOT.user.display_name:
             if len(message.embeds) == 1:
                 desc = message.embeds[0].description

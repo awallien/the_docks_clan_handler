@@ -3,14 +3,15 @@ import random as rand
 import numpy as np
 from io import BytesIO
 from PIL import Image, ImageDraw
-from discord import app_commands, Embed, File
+from discord import Embed, File
 from discord_bot.discord_bot_util import err_embed
 from util import RESPONSE_ERR, RESPONSE_OK, debug_print
 from resources import CHAT_BG, OSRS_FONT
 
 RANDOM_WEIGHTS_OPTIONS = ['True']
 MAX_OPT_CHAR_LEN = 20
-MAX_OPTIONS_LEN = 20 
+MAX_OPTIONS_LEN = 20
+MAX_WEIGHT = 1_000_000
 OSRS_FONT_SIZE = 20
 
 async def spin_cb(_, ctx, options, weights=None, randomize_weights=None, shuffle_options=None, options_detail=None):
@@ -30,19 +31,22 @@ async def spin_cb(_, ctx, options, weights=None, randomize_weights=None, shuffle
 
 def validate_params(options, weights, randomize_weights, shuffle_options, options_details):
     if options is None:
-        return RESPONSE_ERR("No options provided")
+        return RESPONSE_ERR("No options are provided")
     
     if randomize_weights and randomize_weights not in RANDOM_WEIGHTS_OPTIONS:
         return RESPONSE_ERR(f"Value for Randomized Weights Enabled [{randomize_weights}] is not True")
     
     if shuffle_options and not shuffle_options == "True":
-        return RESPONSE_ERR(f"Value for Shuffle Options Enabled [{randomize_weights}] is not True")
+        return RESPONSE_ERR(f"Value for Shuffle Options Enabled [{shuffle_options}] is not True")
     
     if options_details and not options_details == "True":
         return RESPONSE_ERR(f"Value for Option Details Enabled [{options_details}] is not True")
         
     opts_fields = options.strip().split(",")
     opts_len = len(opts_fields)
+
+    if opts_len < 2:
+        return RESPONSE_ERR(f"Number of options must be greater than 2")
 
     if opts_len > MAX_OPTIONS_LEN:
         return RESPONSE_ERR(f"Number of options '{opts_len}' exceeds {MAX_OPTIONS_LEN} options limit")
@@ -63,10 +67,10 @@ def validate_params(options, weights, randomize_weights, shuffle_options, option
             weight = weights_fields[idx].strip()
             try:
                 weight = int(weight)
-                if not isinstance(weight, int) or weight < 1:
+                if not isinstance(weight, int) or weight < 1 or weight > MAX_WEIGHT:
                     raise ValueError
             except ValueError:
-                return RESPONSE_ERR(f"The entered weight [{weight}] is invalid. The weight must be an integer greater than 0.")
+                return RESPONSE_ERR(f"The entered weight [{weight}] is invalid. The weight must be an integer in the range 1..1000000.")
     
     return RESPONSE_OK
 
