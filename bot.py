@@ -7,8 +7,6 @@ from clan_db import ClanDatabase
 from discord_bot import *
 from util import debug_print, debug_set_enable
 
-load_dotenv()
-
 class TheDocksDiscordBot(commands.Bot):
     TOKEN = os.getenv("DISCORD_TOKEN")
     
