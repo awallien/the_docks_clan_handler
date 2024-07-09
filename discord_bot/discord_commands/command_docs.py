@@ -5,7 +5,9 @@ from util import err_print
 
 DOCS = [
     "\"The Docks\" Ranking System and Permission Settings",
-    "How to Set Up Drop Notifications",
+    "How to Set up Drop Notifications",
+    "How to Set up Deaths Notification",
+    "How to Set up OBS to Record Your Screen",
     "The Docks Clan Bot Help Desk"
 ]
 
@@ -24,7 +26,7 @@ async def cb_docs(BOT, ctx):
         docs_msg = "There seems to be no docs here..."
         embed = err_embed(docs_msg, "Interesting...")
     else:
-        docs_msg = "Here is a list of relevant documents/threads: \n" + docs_msg
-        embed = info_embed(docs_msg, "Dock's Docs")
+        docs_msg = "Here is a list of relevant documents/threads: \n\n" + docs_msg
+        embed = info_embed(docs_msg, "The Docks Clan's Docs")
     
     await ctx.send(embed=embed, ephemeral=True)
