@@ -2,6 +2,7 @@ from util import debug_print
 from datetime import datetime, timedelta, timezone
 import re
 from discord import Color, Embed, app_commands
+from discord_bot import info_embed
 
 VALID_DAYS = [30, 60, 90, 180]
 
@@ -38,6 +39,12 @@ async def cb_drops(BOT, ctx, days=30, player=None):
     if player and player not in BOT.db.get_members():
         await ctx.send(f"Error: member '{player}' not found in clan database")
         return
+    
+    if not player and not ctx.author == BOT.mod:
+        await ctx.send(f"Sorry, only Goose is allowed to not specify a player, please use the 'member' parameter")
+        return
+
+    reply_embed = await ctx.send(embed=info_embed("Please wait for this message to be updated.", "Collecting $$$"))
 
     dtime_days = (datetime.now() - timedelta(days=days)).replace(tzinfo=timezone.utc)
     
@@ -74,8 +81,8 @@ async def cb_drops(BOT, ctx, days=30, player=None):
                     if (mvd_item is None) or (drops_item["value"] > player_drops_info["items"][mvd_item]["value"]):
                         player_drops_info["MVD_item"] = info.item
     
-    embed = make_drops_embed(BOT.drop_webhook, days, players_drops, player)
-    await ctx.send(embed=embed, reference=ctx.message)
+    drops_embed = make_drops_embed(BOT.drop_webhook, days, players_drops, player)
+    await reply_embed.edit(embeds=[drops_embed])
 
 async def days_drops_autocompletion(_, current):
     valid_days_str_list = list(map(str, VALID_DAYS))
@@ -97,9 +104,9 @@ def make_drops_embed(drop_wh_name, days, players_drops, player_only=None):
         player_desc = f"for _{player_only}_"
     
     embed = Embed(
-        title=f"{days}-Day \"{drop_wh_name}\" Drop Archive",
+        title=f" {days}-Day \"{drop_wh_name}\" Drop Archive",
         color=Color.blue(),
-        description=f"I gathered the drops of The Docks Clan for the past {days} days {player_desc}. Here is what I collected:",
+        description=f"I gathered the drops of The Docks Clan for the past {days} days{player_desc}. Here is what I collected:",
     )
 
     embed.set_thumbnail(url="https://oldschool.runescape.wiki/images/Coins_10000.png?7fa38")
