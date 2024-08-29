@@ -94,7 +94,7 @@ ACTIVITIES = [
 ]
 
 BOSSES = [
-    "Abyssal Sire", "Alchemical Hydra", "Artio",
+    "Abyssal Sire", "Alchemical Hydra", "Araxxor", "Artio",
     "Barrows Chests", "Bryophyta",
     "Callisto", "Cal'varion", "Cerberus", 
     "Chambers of Xeric", "Chambers of Xeric: Challenge Mode", 

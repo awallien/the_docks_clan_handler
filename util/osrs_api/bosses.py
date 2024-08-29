@@ -40,6 +40,7 @@ class Boss:
 BOSSES = [
 	"Abyssal Sire",
 	"Alchemical Hydra",
+	"Araxxor",
 	"Artio",
 	"Barrows Chests",
 	"Bryophyta",
@@ -105,6 +106,7 @@ class Bosses:
     def __init__(self,):
         self._abyssal_sire = Boss("Abyssal Sire", -1, -1)
         self._alchemical_hydra = Boss("Alchemical Hydra", -1, -1)
+        self._araxxor = Boss("Araxxor", -1, -1)
         self._artio = Boss("Artio", -1, -1)
         self._barrows_chests = Boss("Barrows Chests", -1, -1)
         self._bryophyta = Boss("Bryophyta", -1, -1)
@@ -172,6 +174,10 @@ class Bosses:
     @property
     def alchemical_hydra(self):
         return self._alchemical_hydra
+
+    @property
+    def araxxor(self):
+        return self._araxxor
 
     @property
     def artio(self):
