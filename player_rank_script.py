@@ -144,7 +144,8 @@ class ClanRankScriptHandler(PromptRunner):
             player_info = PlayerRankHandler(player_hiscore).get_max_levels_info()
             debug_print(str(player_info))
             new_rank = player_info["rank"]
-            status = self.clan_db.update_player(player, new_rank=new_rank, active_cnt=False)
+            if new_rank != player_rank:
+                status = self.clan_db.update_player(player, new_rank=new_rank, active_cnt=False)
         
         if status.res and new_rank > player_rank:
             print(f"   Player {player} is promoted from rank {player_rank} to {new_rank}")
