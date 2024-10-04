@@ -94,7 +94,8 @@ ACTIVITIES = [
 ]
 
 BOSSES = [
-    "Abyssal Sire", "Alchemical Hydra", "Araxxor", "Artio",
+    "Abyssal Sire", "Alchemical Hydra", 
+    "Amoxliatl", "Araxxor", "Artio",
     "Barrows Chests", "Bryophyta",
     "Callisto", "Cal'varion", "Cerberus", 
     "Chambers of Xeric", "Chambers of Xeric: Challenge Mode", 
@@ -111,7 +112,7 @@ BOSSES = [
     "Obor", "Phantom Muspah",
     "Sarachnis", "Scorpia", "Scurrius", "Skotizo", "Sol Heredit", "Spindel",
     "Tempoross", "The Gauntlet", "The Corrupted Gauntlet",
-    "The Leviathan", "The Whisperer",
+    "The Hueycoatl", "The Leviathan", "The Whisperer",
     "Theatre of Blood", "Theatre of Blood: Hard Mode", "Thermonuclear Smoke Devil",
     "Tombs of Amascut", "Tombs of Amascut: Expert Mode",
     "TzKal-Zuk", "TzTok-Jad", "Vardorvis", "Venenatis", "Vet'ion", "Vorkath",

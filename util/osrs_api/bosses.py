@@ -40,6 +40,7 @@ class Boss:
 BOSSES = [
 	"Abyssal Sire",
 	"Alchemical Hydra",
+	"Amoxliatl",
 	"Araxxor",
 	"Artio",
 	"Barrows Chests",
@@ -84,6 +85,7 @@ BOSSES = [
 	"Tempoross",
 	"The Gauntlet",
 	"The Corrupted Gauntlet",
+	"The Hueycoatl",
 	"The Leviathan",
 	"The Whisperer",
 	"Theatre of Blood",
@@ -106,6 +108,7 @@ class Bosses:
     def __init__(self,):
         self._abyssal_sire = Boss("Abyssal Sire", -1, -1)
         self._alchemical_hydra = Boss("Alchemical Hydra", -1, -1)
+        self._amoxliatl = Boss("Amoxliatl", -1, -1)
         self._araxxor = Boss("Araxxor", -1, -1)
         self._artio = Boss("Artio", -1, -1)
         self._barrows_chests = Boss("Barrows Chests", -1, -1)
@@ -150,6 +153,7 @@ class Bosses:
         self._tempoross = Boss("Tempoross", -1, -1)
         self._the_gauntlet = Boss("The Gauntlet", -1, -1)
         self._the_corrupted_gauntlet = Boss("The Corrupted Gauntlet", -1, -1)
+        self._the_hueycoatl = Boss("The Hueycoatl", -1, -1)
         self._the_leviathan = Boss("The Leviathan", -1, -1)
         self._the_whisperer = Boss("The Whisperer", -1, -1)
         self._theatre_of_blood = Boss("Theatre of Blood", -1, -1)
@@ -174,6 +178,10 @@ class Bosses:
     @property
     def alchemical_hydra(self):
         return self._alchemical_hydra
+
+    @property
+    def amoxliatl(self):
+        return self._amoxliatl
 
     @property
     def araxxor(self):
@@ -350,6 +358,10 @@ class Bosses:
     @property
     def the_corrupted_gauntlet(self):
         return self._the_corrupted_gauntlet
+
+    @property
+    def the_hueycoatl(self):
+        return self._the_hueycoatl
 
     @property
     def the_leviathan(self):
