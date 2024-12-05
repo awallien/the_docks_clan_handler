@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 from util import *
 from clan_db import ClanDatabase
+from concurrent.futures import ThreadPoolExecutor
 
 class ClanRankScriptHandler(PromptRunner):
     """Handles user's commands"""
@@ -22,7 +23,8 @@ class ClanRankScriptHandler(PromptRunner):
             "dumpdb": PromptArgs("dumpdb", self.cb_dump_db, "dump cache db", opt_params=["rank"]),
             "dumpplayer": PromptArgs("dumpplayer", self.cb_dump_player, "dump one player in db", ["player"]),
             "updatedbplayer": PromptArgs("updatedbplayer", self.cb_update_db_player, "do one update on player in db", ["player"]),
-            "playerstat": PromptArgs("playerstat", self.cb_dump_player_stat, "dump player stat from Hiscore", ["player"])
+            "playerstat": PromptArgs("playerstat", self.cb_dump_player_stat, "dump player stat from Hiscore", ["player"]),
+            "updateleagues": PromptArgs("updateleagues", self.cb_update_league_points, "update league points")
         }
 
         super().__init__(self.cmds, banner=self.banner)
@@ -212,6 +214,26 @@ class ClanRankScriptHandler(PromptRunner):
         else:
             for skill in SKILLS:
                 print(f"{skill}: {player_hs.skills.get(skill).level}")
+    
+    @default_response_ok
+    def cb_update_league_points(self, _):
+
+        def update_league_points_internal(member):
+            try:
+                league_hs = Hiscore(member, AccountTypes.SEASONAL)
+                league_pts = league_hs.activities.get("League Points").score
+                if league_pts > 0:
+                    return (member, league_pts)
+            except:
+                err_print(f"!!! Unable to find seasonal data for {member}")
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            updates = list(filter(lambda x: x is not None, executor.map(update_league_points_internal, self.clan_db.get_members())))
+        
+        for update in updates:
+            if update:
+                self.clan_db.update_player(player=update[0], leagues_pts=update[1])
+
 
 
 if __name__ == "__main__":

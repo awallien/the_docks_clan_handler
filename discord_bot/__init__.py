@@ -4,3 +4,4 @@ from .discord_commands.command_player import opt_player_autocompletion, cb_playe
 from .discord_commands.command_spin import spin_cb
 from .discord_commands.command_event import event_cb, option_event_autocompletion, timezone_event_autocompletion
 from .discord_commands.command_docs import cb_docs
+from .discord_commands.command_leagues_board import leagues_board_cb

@@ -7,6 +7,8 @@ from clan_db import ClanDatabase
 from discord_bot import *
 from util import debug_print, debug_set_enable
 
+load_dotenv()
+
 class TheDocksDiscordBot(commands.Bot):
     TOKEN = os.getenv("DISCORD_TOKEN")
     
@@ -136,6 +138,11 @@ async def spin(ctx,
                            timezone=timezone_event_autocompletion)
 async def event(ctx, option, start_datetime:str=None, end_datetime:str=None, timezone:str=None):
     await event_cb(BOT, ctx, option, start_datetime, end_datetime, timezone)
+
+@docks.command(name="leagues_board")
+async def leagues_board(ctx):
+    print("func called")
+    await leagues_board_cb(BOT, ctx)
 
 if __name__ == "__main__":
     parser = ArgumentParser(

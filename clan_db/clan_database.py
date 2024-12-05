@@ -32,6 +32,9 @@ class ClanDatabase:
     # last date that a member is promoted
     LAST_RANKED_DATE = "Last Rank Date"
 
+    # League Points
+    LEAGUE_POINTS = "League Points"
+
     # rank challenge data for members in honor ranks
     RANK_CHLG_ATTEMPTS = "Rank Challenge Attempts"
     NEXT_RANK_CHLG_DATE = "Next Rank Challenge Date"
@@ -46,6 +49,7 @@ class ClanDatabase:
             self.PARENT,
             self.ACTIVE_CNT,
             self.TOTAL_XP,
+            self.LEAGUE_POINTS,
             self.LAST_RANKED_DATE,
             self.RANK_CHLG_ATTEMPTS,
             self.NEXT_RANK_CHLG_DATE,
@@ -135,6 +139,7 @@ class ClanDatabase:
             self.RANK: rank, 
             self.JOINED: joined_date, 
             self.ACTIVE_CNT: 0,
+            self.LEAGUE_POINTS: 0,
             self.LAST_RANKED_DATE: 0,
             self.RANK_CHLG_ATTEMPTS: 0,
             self.NEXT_RANK_CHLG_DATE: 0,
@@ -151,7 +156,7 @@ class ClanDatabase:
             
         return RESPONSE_OK
 
-    def update_player(self, player, new_name=None, new_rank=None, total_xp=None, new_parent=None, active_cnt=None, rank_challenge_attempt=None):
+    def update_player(self, player, new_name=None, new_rank=None, total_xp=None, new_parent=None, active_cnt=None, rank_challenge_attempt=None, leagues_pts=None):
         if player not in self.db[self.MEMBER].values:
             return RESPONSE_ERR(f"Player name {player} does not exist in clan")
         
@@ -169,6 +174,8 @@ class ClanDatabase:
             self.db.loc[self.db.Member == player, self.TOTAL_XP] = total_xp
         if new_parent:
             self.db.loc[self.db.Member == player, self.PARENT] = new_parent
+        if leagues_pts:
+            self.db.loc[self.db.Member == player, self.LEAGUE_POINTS] = leagues_pts
         if not (active_cnt is None):
             if active_cnt:
                 self.db.loc[self.db.Member == player, self.ACTIVE_CNT] += 1
@@ -213,5 +220,8 @@ class ClanDatabase:
             print(self.db[self.db.Member == player])
         else:
             print(self.db.to_string())
+    
+    def internal_update(self):
+        self.db = pd.read_csv(self.cache_db_file)
 
         return RESPONSE_OK
