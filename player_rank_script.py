@@ -10,7 +10,7 @@ class ClanRankScriptHandler(PromptRunner):
             raise ValueError("Clan DB must be of type ClanDatabase and must NOT be None")
 
         self.clan_db : ClanDatabase = clan_db
-        self.banner = "The Docks Rank Script v1.0"
+        self.banner = "The Docks Rank Script"
         self.cmds = {
             "addplayer": PromptArgs("addplayer", self.cb_add_player, "add new player to db", ["player"], ["joined", "parent"]),
             "updateplayer": PromptArgs("updateplayer", self.cb_update_player, "update player's info in db", ["player"], ["name", "rank", "parent", "active_cnt", "rank_challenge_attempt"]),

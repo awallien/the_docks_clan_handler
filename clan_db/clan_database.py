@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from util.prompt_args import RESPONSE_ERR, RESPONSE_OK
-from util.logger import debug_print, err_print
+from util.logger import debug_print
 
 class ClanDatabase:
     """Handles a clan members' info in a database"""

@@ -13,12 +13,6 @@ class PromptArgsResponse:
 RESPONSE_OK = PromptArgsResponse(True, "")
 RESPONSE_ERR = lambda err_msg: PromptArgsResponse(False, err_msg)
 
-def default_response_ok(func):
-    def inner(*args, **kwargs):
-        func(*args, **kwargs)
-        return RESPONSE_OK
-    return inner
-
 class PromptArgs:
     def __init__(self, arg_name, cb, desc="", req_params = [], opt_params = [], opt_no_arg_params=[]):
         self.arg_name = arg_name

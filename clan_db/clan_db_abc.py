@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class IEntity(ABC):
@@ -18,7 +18,7 @@ class IDao(ABC):
         pass
 
     @abstractmethod
-    def update(self, key: Any, obj: IEntity) -> bool:
+    def update(self, obj: IEntity) -> bool:
         pass
 
     @abstractmethod
