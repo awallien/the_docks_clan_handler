@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 from dotenv import load_dotenv
 from discord import ClientException, Intents, utils as dutils, app_commands
 from discord.ext import commands
-from clan_db import ClanDatabase
+from db import ClanDatabase
 from discord_bot import *
 from util import debug_print, debug_set_enable
 

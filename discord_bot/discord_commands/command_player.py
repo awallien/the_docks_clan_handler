@@ -1,5 +1,5 @@
 from pandas import isna
-from clan_db.clan_database import ClanDatabase
+from db.clan_database import ClanDatabase
 from discord import Color, Embed, app_commands
 
 from util import debug_print, PlayerRankHandler, sanitize_player_rank

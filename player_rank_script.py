@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 from util import *
-from clan_db import ClanDatabase
+from db import ClanDatabase
 
 class ClanRankScriptHandler(PromptRunner):
     """Handles user's commands"""

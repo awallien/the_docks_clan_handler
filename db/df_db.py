@@ -1,5 +1,10 @@
+import os
+import pathlib
 from typing import Callable, Optional, List, Dict, Tuple, Any, Union
+from datetime import datetime
+from pyarrow import parquet as pq
 import pandas as pd
+
 
 class DatabaseColumn:
     """Database Column containing the name of the column and default value"""
@@ -69,6 +74,57 @@ class DatabaseRow:
             return [col.name for col in self._contents.keys()]
         return list(self._contents.keys())
 
+class DataFrameDatabaseDirCache:
+
+    def __init__(self):
+        self._cache_dir : str   = f"{str(pathlib.Path(__file__).parent.absolute())}/cache"
+        
+        if not os.path.isdir(self._cache_db_dir):
+            os.mkdir(self._cache_db_dir)
+
+        assert(os.path.isdir(self._cache_db_dir), f"{self._cache_db_dir} dir does not exist")
+
+    def file_lst(self) -> List[Tuple[int, str, str]]:
+        """
+        Get list of cache files in directory
+        Each item in tuple contains an index, filename, and last modified datetime
+        """
+        files = []
+
+        for idx, file in enumerate(os.listdir(self._cache_dir)):
+            fpath = os.path.join(self._cache_dir, file)
+            last_modified_datetime = datetime.fromtimestamp(os.path.getmtime(fpath))
+            files.append((idx, file, str(last_modified_datetime)))
+
+        files.sort(key= lambda f: f[2], reverse=True)
+        return files
+
+    def save(self, df_db: pd.DataFrame, fname: str):
+        """Save to cache"""
+        fpath = os.path.join(self._cache_dir, fname)
+        df_db.to_parquet(fpath)
+        print(f"DB saved successfully to {fpath}")
+
+    def load(self, fname='', f_idx=-1):
+        """Load file from cache - just returns the filename in cache, or the most recent one"""
+        lst_file = self.file_lst()
+
+        if not lst_file:
+            return False
+        
+        if f_idx:
+            return lst_file[f_idx]
+        
+        if fname:
+            for f_item in lst_file:
+                if f_item[1] == fname:
+                    return fname
+            return None
+
+        return lst_file[0][1] 
+
+    def delete(self):
+        pass
 
 class DataFrameDatabase:
     """Database class, where underlying data structure is pandas DataFrame"""
@@ -78,7 +134,9 @@ class DataFrameDatabase:
         self._prim_cols : Tuple[DatabaseColumn]              = prim_cols
         self._cols : List[DatabaseColumn]                    = cols
         self._sort_pending : bool                            = False
+        self._save_to_cache_pending : bool                   = False
         self._prim_cols_sort_fn : Callable[[Any], Any]       = prim_cols_sort_fn or (lambda x: x)
+        self._cache : DataFrameDatabaseDirCache              = DataFrameDatabaseDirCache()
 
         assert(
             all([prim_col in self._cols for prim_col in self._prim_cols]), 
@@ -86,28 +144,10 @@ class DataFrameDatabase:
         )
 
         self._create_table()
-
-    def _create_table(self) -> bool:
-        """Create DataFrame table"""
-        if self._db:
-            return False
-        
-        db_col_types = dict()
-        for db_col in self._cols:
-            col_type = None
-            if db_col.dtype == "category":
-                col_type = pd.CategoricalDtype(db_col.categories)
-            else:
-                col_type = db_col.dtype
-            
-            db_col_types[db_col.name] = col_type
-
-        self._db = ( 
-            pd.DataFrame(columns=list(db_col_types.keys()))
-                .astype(db_col_types)
-        )
-
-        return True 
+    
+    @property
+    def save_to_cache_pending(self):
+        return self._save_to_cache_pending
 
     def add_row(self, obj: DatabaseRow) -> bool:
         """Add a row to the DataFrame"""
@@ -132,6 +172,7 @@ class DataFrameDatabase:
         new_row_df = pd.DataFrame([{column.name: obj.get(column.name, column.default) for column in self._cols}])
         pd.concat([self._db, new_row_df], ignore_index=True)
         self._sort_pending = True
+        self._save_to_cache_pending = True
         
         return True
 
@@ -164,6 +205,8 @@ class DataFrameDatabase:
         # Prepare the updated row and replace 
         prepared_row = {col.name: obj.get(col) for col in obj.columns()}
         self._db.loc[match_ixs[0], obj.columns(as_str=True)] = prepared_row
+        
+        self._save_to_cache_pending = True
 
         return True
 
@@ -220,6 +263,8 @@ class DataFrameDatabase:
         # # Drop the row from the DataFrame
         self._db = self._db.drop(match_ixs[0]).reset_index(drop=True)
 
+        self._save_to_cache_pending = True
+
         return True
     
     def dump(self, filter_expr: Optional[str]=None) -> List[DatabaseRow]:
@@ -257,6 +302,62 @@ class DataFrameDatabase:
             ).reset_index(drop=True)
         
             self._sort_pending = False
+
+    def save_to_cache(self, fname='') -> None:
+        """Save current database into cache file"""
+        assert(self._db, "Database is None")
+        if not fname:
+            fname = f"df_db_{datetime.now().strftime()}_{pd.util.hash_pandas_object(self._db)}.parquet"
+        
+        self.sort()        
+        self._cache.save(self._db, fname)
+        self._save_to_cache_pending = False
+    
+    def load_from_cache(self, fname='', cache_file_idx=-1) -> bool:
+        """Load database file into this DataFrame, if no file given, get most recent file in cache"""
+        file = self._cache.load(fname, cache_file_idx)
+        
+        # Check if file is a proper parquet file
+        if not file or not pq.read_metadata(file):
+            return False
+        
+        # Check if column names are the same as this db
+        if not set(pq.read_schema(file).names) == set([col.name for col in self._cols]):
+            return False
+        
+        self._db = ( 
+            pd.read_parquet(file, columns=self._cols)
+                .astype(self._get_db_col_types())
+        )
+
+        return True
+
+    def _create_table(self) -> bool:
+        """Create DataFrame table"""
+        if self._db:
+            return False
+        
+        db_col_types = self._get_db_col_types()
+        self._db = ( 
+            pd.DataFrame(columns=list(db_col_types.keys()))
+                .astype(self._get_db_col_types())
+        )
+
+        return True
+    
+    def _get_db_col_types(self) -> Dict[str, Union[pd.CategoricalDtype, str]]:
+        """Get dictionary of column data types"""
+        db_col_types = dict()
+        for db_col in self._cols:
+            col_type = None
+            if db_col.dtype == "category":
+                col_type = pd.CategoricalDtype(db_col.categories)
+            else:
+                col_type = db_col.dtype
+            
+            db_col_types[db_col.name] = col_type
+        
+        return db_col_types
 
     def _validate_row(self, row: DatabaseRow) -> bool:
         """Ensure row is validated before doing actions with DataFrame"""

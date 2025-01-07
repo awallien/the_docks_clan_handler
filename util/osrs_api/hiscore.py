@@ -1,4 +1,6 @@
 import requests
+from enum import Enum, verify, UNIQUE
+from http import HTTPStatus
 
 if __name__ == "__main__":
     from skills import *
@@ -6,9 +8,6 @@ if __name__ == "__main__":
     from bosses import *
 else:
     from util.osrs_api import *
-
-from enum import Enum, verify, UNIQUE
-from http import HTTPStatus
 
 HISCORE_API_URL_FMT = "https://secure.runescape.com/m=hiscore_oldschool%s/index_lite.ws?player=%s"
 
@@ -73,35 +72,35 @@ class Hiscore:
             raise Exception(f"Unable to find {self.username} in Hiscores")
 
     @property
-    def username(self):
+    def username(self) -> str:
         return self._username
     
     @property
-    def account_type(self):
+    def account_type(self) -> AccountTypes:
         return self._account_type
 
     @property
-    def total_xp(self):
+    def total_xp(self) -> int:
         return self._total_xp
     
     @property
-    def total_rank(self):
+    def total_rank(self) -> int:
         return self._total_rank
 
     @property
-    def total_level(self):
+    def total_level(self) -> int:
         return self._total_level
 
     @property
-    def activities(self):
+    def activities(self) -> Activities:
         return self._activities
     
     @property
-    def bosses(self):
+    def bosses(self) -> Bosses:
         return self._bosses
 
     @property
-    def skills(self):
+    def skills(self) -> Skills:
         return self._skills
     
     def __str__(self):

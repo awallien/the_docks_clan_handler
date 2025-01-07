@@ -1,17 +1,7 @@
 import shlex
 from argparse import ArgumentParser
-from . import debug_set_enable, debug_print
+from util import debug_set_enable, debug_print, RESPONSE_OK, default_response_ok, RESPONSE_ERR
 
-class PromptArgsResponse:
-    def __init__(self, res, err_msg):
-        self.res = res
-        self.err = err_msg
-
-    def __bool__(self):
-        return self.res
-
-RESPONSE_OK = PromptArgsResponse(True, "")
-RESPONSE_ERR = lambda err_msg: PromptArgsResponse(False, err_msg)
 
 class PromptArgs:
     def __init__(self, arg_name, cb, desc="", req_params = [], opt_params = [], opt_no_arg_params=[]):

@@ -1,10 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
+from entity import IEntity
 
-class IEntity(ABC):
-    """Interface for an entity class"""
-    pass
 
 class IDao(ABC):
     """Interface for DAO class"""

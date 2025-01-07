@@ -9,15 +9,13 @@ class Response:
         return self.res
 
 RESPONSE_OK = Response(True, "")
-RESPONSE_ERR = lambda err_msg: Response(False, err_msg)
 
+def RESPONSE_ERR(err_msg):
+    return Response(False, err_msg)
+
+# wrapper func
 def default_response_ok(func):
     def inner(*args, **kwargs):
         func(*args, **kwargs)
         return RESPONSE_OK
     return inner
-
-
-def raise_err_if_null(obj, obj_str):
-    if obj is None:
-        raise ValueError(f"{obj_str} is None")
