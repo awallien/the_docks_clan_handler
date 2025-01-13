@@ -3,7 +3,7 @@ from datetime import datetime
 from util.osrs_api import Hiscore, SKILLS as osrs_api_SKILLS
 from entity import ClanMemberRankEnum, ClanMember
     
-class ClanMemberRankService:
+class RankService:
 
     MELEE_CMB_SKILLS = {"attack", "strength", "defence"}
     CMB_SKILLS = MELEE_CMB_SKILLS | {"ranged", "magic"}
@@ -32,12 +32,11 @@ class ClanMemberRankService:
         return ClanMemberRankEnum.RANK_1
     
     def get_next_rank(self) -> ClanMemberRankEnum:
-        """Given the clan member's current, check and return the next rank"""
+        """Given the clan member's current, check and return the next rank"""       
         current_rank = self._clan_member.rank
         
-        # TODO: May need to revisit RANK_INVALID condition
-        if ((current_rank == ClanMemberRankEnum.RANK_INVALID) or
-            (current_rank == ClanMemberRankEnum.RANK_15)
+        assert(not current_rank == ClanMemberRankEnum.RANK_INVALID, "Clan member's rank is invalid")
+        if ((current_rank == ClanMemberRankEnum.RANK_15)
             (current_rank in ClanMemberRankEnum.honorable_ranks_challenged()) or
             (current_rank in ClanMemberRankEnum.honorable_ranks_non_challenged()) or
             (current_rank in ClanMemberRankEnum.administrative_ranks())):
@@ -73,6 +72,9 @@ class ClanMemberRankService:
     
     def _get_next_achieve_rank(self) -> ClanMemberRankEnum:
         """Promotion to next achievement rank - based on the member's stats"""
+        if not self._hiscore_data:
+            return ClanMemberRankEnum.RANK_5
+        
         cmb_avg = self._get_cmb_skills_avg()
         non_cmb_avg = self._get_non_cmb_skills_avg()
 

@@ -46,11 +46,14 @@ class ClanMemberService:
     def get_member(self, name: str) -> Optional[ClanMember]:
         return self._clan_member_dao.get(name)
 
-    def get_members(self) -> List[ClanMember]:
-        return self._clan_member_dao.get_all()
+    def get_members(self, filter_expr='') -> List[ClanMember]:
+        return self._clan_member_dao.get_all(filter_expr)
 
     def save_database(self, fname=''):
         self._clan_member_dao.save_db(fname)
 
     def load_database(self, fname='', cache_f_idx=-1) -> bool:
         return self._clan_member_dao.load_db(fname, cache_f_idx)
+    
+    def cache_db_list(self):
+        return self._clan_member_dao.cache_db_list()

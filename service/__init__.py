@@ -1,2 +1,2 @@
 from .clan_member_service import ClanMemberService
-from .rank_service import ClanMemberRankService
+from .rank_service import RankService

@@ -1,9 +1,9 @@
 from datetime import datetime
 from enum import Enum, verify, UNIQUE
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 from dao import IDao
-from db import DatabaseColumn, DatabaseRow, DataFrameDatabase
+from db import DatabaseColumn, DatabaseRow, DataFrameDatabase, DataFrameDatabaseDirCache
 from entity import ClanMember, ClanMemberRankEnum
 
 
@@ -31,6 +31,7 @@ class ClanMemberDFDAO(IDao):
         self._df_db = DataFrameDatabase(prim_cols=(ClanMemberFieldsEnum.MEMBER.value,), 
                                         columns=ClanMemberFieldsEnum.values(),
                                         prim_cols_sort_fn=lambda col: col.str.lower())
+        self._db_cache = DataFrameDatabaseDirCache()
 
     def add(self, obj: ClanMember) -> bool:
         """Add new clan member to DF Database"""
@@ -108,3 +109,6 @@ class ClanMemberDFDAO(IDao):
 
     def load_db(self, fname='', cache_f_idx=-1) -> bool:
         return self._df_db.load_from_cache(fname, cache_f_idx)
+    
+    def cache_db_list(self) -> List[Tuple[int, str, str]]:
+        return self._db_cache.cache_list()

@@ -84,7 +84,7 @@ class DataFrameDatabaseDirCache:
 
         assert(os.path.isdir(self._cache_db_dir), f"{self._cache_db_dir} dir does not exist")
 
-    def file_lst(self) -> List[Tuple[int, str, str]]:
+    def cache_list(self) -> List[Tuple[int, str, str]]:
         """
         Get list of cache files in directory
         Each item in tuple contains an index, filename, and last modified datetime
@@ -107,12 +107,12 @@ class DataFrameDatabaseDirCache:
 
     def load(self, fname='', f_idx=-1):
         """Load file from cache - just returns the filename in cache, or the most recent one"""
-        lst_file = self.file_lst()
+        lst_file = self.cache_list()
 
         if not lst_file:
             return False
         
-        if f_idx:
+        if f_idx > 0 and f_idx in range(0, len(lst_file)):
             return lst_file[f_idx]
         
         if fname:
@@ -123,8 +123,16 @@ class DataFrameDatabaseDirCache:
 
         return lst_file[0][1] 
 
-    def delete(self):
-        pass
+    def delete(self, fname='', f_idx=-1) -> bool:
+        if not fname or f_idx < 0:
+            return False
+        
+        cache_file = self.load(fname, f_idx)
+        if not cache_file:
+            return False
+        
+        os.remove(os.path.join(self._cache_dir, cache_file))
+        return True
 
 class DataFrameDatabase:
     """Database class, where underlying data structure is pandas DataFrame"""

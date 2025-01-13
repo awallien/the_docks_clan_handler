@@ -11,7 +11,7 @@ class ClanMember(IEntity):
         self._member : str                  = member
         self._joined_date : datetime        = joined_date
 
-        self._rank : ClanMemberRankEnum     = ""
+        self._rank : ClanMemberRankEnum     = ClanMemberRankEnum.RANK_INVALID
         self._total_xp : int                = -1
         self._last_rank_date : datetime     = datetime.min
 
