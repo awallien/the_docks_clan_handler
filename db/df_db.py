@@ -19,8 +19,8 @@ class DatabaseColumn:
         # only used if dtype is 'category'
         self._categories: List[Union[str, int]] = categories
 
-        assert (self._dtype == 'category' and self._categories, 
-                "`categories` must NOT be None if dtype is `category`")
+        assert self._dtype == 'category' and self._categories, 
+                "`categories` must NOT be None if dtype is `category`"
     
     @property
     def name(self):
@@ -66,7 +66,7 @@ class DatabaseRow:
         return self._contents.get(col.name, col.default)
     
     def put(self, col: DatabaseColumn, value: Any):
-        assert(isinstance(value, col.dtype), f"`{value}` does not match type {col.dtype}")
+        assert isinstance(value, col.dtype), f"`{value}` does not match type {col.dtype}"
         self._contents[col.name] = value
 
     def columns(self, as_str=False):
@@ -82,7 +82,7 @@ class DataFrameDatabaseDirCache:
         if not os.path.isdir(self._cache_db_dir):
             os.mkdir(self._cache_db_dir)
 
-        assert(os.path.isdir(self._cache_db_dir), f"{self._cache_db_dir} dir does not exist")
+        assert os.path.isdir(self._cache_db_dir), f"{self._cache_db_dir} dir does not exist"
 
     def cache_list(self) -> List[Tuple[int, str, str]]:
         """
@@ -146,10 +146,10 @@ class DataFrameDatabase:
         self._prim_cols_sort_fn : Callable[[Any], Any]       = prim_cols_sort_fn or (lambda x: x)
         self._cache : DataFrameDatabaseDirCache              = DataFrameDatabaseDirCache()
 
-        assert(
-            all([prim_col in self._cols for prim_col in self._prim_cols]), 
+        assert \
+            all([prim_col in self._cols for prim_col in self._prim_cols]), \
             "Primary column is NOT found in list of columns"
-        )
+        
 
         self._create_table()
     
@@ -159,7 +159,7 @@ class DataFrameDatabase:
 
     def add_row(self, obj: DatabaseRow) -> bool:
         """Add a row to the DataFrame"""
-        assert(self._db, "Database should NOT be None")
+        assert self._db, "Database should NOT be None"
         
         if not self._validate_row(obj):
             return False
@@ -190,7 +190,7 @@ class DataFrameDatabase:
         Note: Primary values cannot be modified through this function. 
         To update primary values, you must delete the existing row and reinsert it with the new values.
         """
-        assert(self._db, "Database is None")
+        assert self._db, "Database is None"
 
         if not self._validate_row(obj):
             return False
@@ -205,7 +205,7 @@ class DataFrameDatabase:
         # Ensure row is present in the db and get its row index
         match_ixs = self._db.index[self._db.apply(row_filter, axis=1)]
         match_ixs_len = len(match_ixs)
-        assert(match_ixs_len <= 1, f"Unexpected number of indices: {match_ixs_len}")
+        assert match_ixs_len <= 1, f"Unexpected number of indices: {match_ixs_len}"
         
         if not match_ixs_len:
             return False
@@ -220,7 +220,7 @@ class DataFrameDatabase:
 
     def get_row(self, obj: DatabaseRow) -> Optional[DatabaseRow]:
         """Get a row in a DataFrame and write it into a DatabaseRow"""
-        assert(self._db, "Database is None")
+        assert self._db, "Database is None"
 
         if not self._validate_row(obj):
             return None
@@ -231,7 +231,7 @@ class DataFrameDatabase:
         )
         queried_df = self._db.query(query_expr)
         queried_df_len = len(queried_df)
-        assert(queried_df_len <= 1, f"Unexpected number of indices: {queried_df_len}")
+        assert queried_df_len <= 1, f"Unexpected number of indices: {queried_df_len}"
         
         if not queried_df.empty():
             return None
@@ -248,7 +248,7 @@ class DataFrameDatabase:
 
     def delete_row(self, obj: DatabaseColumn) -> bool:
         """Delete row in DataFrame based on primary key values in obj"""
-        assert(self._db, "Database is None")
+        assert self._db, "Database is None"
     
         if not self._validate_row(obj):
             return False
@@ -263,7 +263,7 @@ class DataFrameDatabase:
         # Ensure row exists in database and get its index
         match_ixs = self._db.index[self._db.apply(row_filter, axis=1)]
         match_ixs_len = len(match_ixs)
-        assert(match_ixs_len <= 1, f"Unexpected number of indices: {match_ixs_len}")
+        assert match_ixs_len <= 1, f"Unexpected number of indices: {match_ixs_len}"
         
         if not match_ixs_len:
             return False
@@ -277,7 +277,7 @@ class DataFrameDatabase:
     
     def dump(self, filter_expr: Optional[str]=None) -> List[DatabaseRow]:
         """Dump rows from the DataFrame with optional filter expression"""
-        assert(self._db, "Database is None")
+        assert self._db, "Database is None"
 
         if self._sort_pending:
             self.sort()
@@ -301,7 +301,7 @@ class DataFrameDatabase:
     
     def sort(self) -> None:
         """Sort the database"""
-        assert(self._db, "Database is None")
+        assert self._db, "Database is None"
 
         if self._sort_pending:
             self._db = self._db.sort_values(
@@ -313,7 +313,7 @@ class DataFrameDatabase:
 
     def save_to_cache(self, fname='') -> None:
         """Save current database into cache file"""
-        assert(self._db, "Database is None")
+        assert self._db, "Database is None"
         if not fname:
             fname = f"df_db_{datetime.now().strftime()}_{pd.util.hash_pandas_object(self._db)}.parquet"
         

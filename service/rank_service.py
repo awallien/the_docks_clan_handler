@@ -35,7 +35,7 @@ class RankService:
         """Given the clan member's current, check and return the next rank"""       
         current_rank = self._clan_member.rank
         
-        assert(not current_rank == ClanMemberRankEnum.RANK_INVALID, "Clan member's rank is invalid")
+        assert not current_rank == ClanMemberRankEnum.RANK_INVALID, "Clan member's rank is invalid"
         if ((current_rank == ClanMemberRankEnum.RANK_15)
             (current_rank in ClanMemberRankEnum.honorable_ranks_challenged()) or
             (current_rank in ClanMemberRankEnum.honorable_ranks_non_challenged()) or

@@ -1,0 +1,139 @@
+---
+docks_clan_commands:
+  _typedefs_:
+    rank_enum:
+      _desc_: "Enum of Ranks"
+      _type_: "enum"
+      INVALID:  "0"
+      RANK_1:   "1"
+      RANK_2:   "2"
+      RANK_3:   "3"
+      RANK_4:   "4"
+      RANK_5:   "5"
+      RANK_6:   "6"
+      RANK_7:   "7"
+      RANK_8:   "8"
+      RANK_9:   "9"
+      RANK_10: "10"
+      RANK_11: "11"
+      RANK_12: "12"
+      RANK_13: "13"
+      RANK_14: "14"
+      RANK_15: "15"
+      RANK_16: "16"
+      RANK_17: "17"
+      RANK_18: "18"
+      RANK_19: "19"
+      RANK_20: "20"
+      RANK_21: "21"
+      RANK_22: "22"
+      RANK_23: "23"
+      RANK_24: "24"
+      RANK_A:   "A"
+      RANK_D:   "D"
+      RANK_O:   "O"
+
+  _groupings_:
+    clan_member_grouping:
+      name:
+        _desc_: "Name of clan member"
+        _type_: "string"
+      joined_date:
+        _desc_: "Joined date in yyyy-mm-dd"
+        _type_: "date"
+      rank:
+        _desc_: "Rank of clan member"
+        _type_: "rank_enum"
+      total_xp:
+        _desc_: "T/F to update total xp"
+        _type_: "bool"
+    
+  _configs_:
+    member:
+      _incomplete_: true
+      _desc_: "Member configurations"
+      _validate_: "db_is_loaded"
+      add:
+        _callback_: "add_clan_member_cb"
+        _groupings_:
+          - clan_member_grouping:
+            - name:
+              _mandatory_: true
+            - joined_date:
+              _mandatory_: true
+      update:
+        _callback_: "update_clan_member_cb"
+        _groupings_:
+          - clan_member_grouping:
+            - name:
+              _mandatory_: true
+            - joined_date
+            - rank
+            - total_xp
+      delete:
+        _callback_: "delete_clan_member_cb"
+        _groupings_:
+          - clan_member_grouping:
+            - name:
+              _mandatory_: true
+
+    db:
+      _incomplete_: true
+      _desc_: "Database Configurations"
+      save:
+        _callback_: "save_db_cb"
+        _desc_: "Save current working database to cache"
+        _type_: "empty"
+      load:
+        _callback_: "load_db_cb"
+        _validate_: "db_load_is_valid"
+        _desc_: "Load database from cache"
+        _oneof_:
+          _mandatory_: true
+          name:
+            _desc_: "database cache name"
+            _type_: "string"
+          index:
+            _desc_: "index of database cache"
+            _type_: "uint"
+    
+    debug:
+      _callback_: "debug_cb"
+      _oneof_:
+        _mandatory_: "true"
+        enable:
+          _desc_: "Enable debug log"
+          _type_: "empty"
+        disable:
+          _desc_: "Disable debug log"
+          _type_: "empty"
+
+  _opers_:
+    member:
+      _incomplete_: true
+      _desc_: "clan member's info"
+      _callback_: "show_clan_members_cb"
+      name:
+        _desc_: "Name of clan member"
+        _type_: "string"
+        _mandatory_: true
+      stat:
+        _desc_: "Clan member's stat via Hiscore API"
+    members:
+      _desc_: "clan members' info"
+      _callback_: "show_clan_members_cb"
+      _groupings_:
+        - clan_member_grouping:
+          - joined_date
+          - rank
+          - total_xp
+      last_rank_date:
+        _desc_: "Last rank date"
+        _type_: "date"
+    db:
+      _incomplete_: true
+      cache:
+        _callback_: "show_db_cache_cb"
+        _desc_: "List database cache"
+        _type_: "empty"
+      

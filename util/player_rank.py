@@ -16,7 +16,7 @@ class PlayerRankHandler:
     HONOR_RANKS = [11, 12, 13, 14] + MOD_RANKS
 
     def __init__(self, player) -> None:
-        assert(isinstance(player, Hiscore))
+        assert isinstance(player, Hiscore)
         self.player: Hiscore = player
 
     def get_new_player_rank(self):
