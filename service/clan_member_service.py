@@ -55,5 +55,8 @@ class ClanMemberService:
     def load_database(self, fname='', cache_f_idx=-1) -> bool:
         return self._clan_member_dao.load_db(fname, cache_f_idx)
     
+    def db_is_loaded(self) -> bool:
+        return self._clan_member_dao.db_is_loaded()
+    
     def cache_db_list(self):
         return self._clan_member_dao.cache_db_list()

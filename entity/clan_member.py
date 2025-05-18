@@ -1,7 +1,10 @@
 
 from datetime import datetime
 
-from entity import IEntity, ClanMemberRankEnum
+from .ientity import IEntity
+from .rank import ClanMemberRankEnum
+
+# from entity import IEntity, ClanMemberRankEnum
 
 
 class ClanMember(IEntity):

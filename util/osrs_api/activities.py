@@ -56,6 +56,7 @@ ACTIVITIES = [
 	"Soul Wars Zeal",
 	"Rifts closed",
 	"Colosseum Glory",
+	"Collections Logged",
 ]
 
 class Activities:
@@ -78,6 +79,7 @@ class Activities:
         self._soul_wars_zeal = Activity("Soul Wars Zeal", -1, -1)
         self._rifts_closed = Activity("Rifts closed", -1, -1)
         self._colosseum_glory = Activity("Colosseum Glory", -1, -1)
+        self._collections_logged = Activity("Collections Logged", -1, -1)
 
     @property
     def league_points(self):
@@ -150,6 +152,10 @@ class Activities:
     @property
     def colosseum_glory(self):
         return self._colosseum_glory
+
+    @property
+    def collections_logged(self):
+        return self._collections_logged
 
     
     def __str__(self):

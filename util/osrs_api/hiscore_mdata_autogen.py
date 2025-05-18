@@ -15,7 +15,8 @@ import re
 """
 
 def make_init_vars(var_lst, var_val_lst):
-    return f"\n{' '*8}".join([f"self._{var_lst[i]} = {var_val_lst[i]}" for i in range(len(var_lst))])
+    assert len(var_lst) == len(var_val_lst)
+    return f"\n{' '*8}".join([f"self._{var} = {var_val}" for var,var_val in zip(var_lst, var_val_lst)])
 
 def make_getter(var):
     return \
@@ -90,7 +91,8 @@ ACTIVITIES = [
     "Bounty Hunter (Legacy) - Hunter", "Bounty Hunter (Legacy) - Rogue",
     "Clue Scrolls (all)", "Clue Scrolls (beginner)", "Clue Scrolls (easy)",
     "Clue Scrolls (medium)", "Clue Scrolls (hard)", "Clue Scrolls (elite)", "Clue Scrolls (master)",
-    "LMS - Rank", "PvP Arena - Rank", "Soul Wars Zeal", "Rifts closed", "Colosseum Glory"
+    "LMS - Rank", "PvP Arena - Rank", "Soul Wars Zeal", "Rifts closed", "Colosseum Glory",
+    "Collections Logged"
 ]
 
 BOSSES = [
@@ -108,15 +110,15 @@ BOSSES = [
     "Kalphite Queen", "King Black Dragon", "Kraken",
     "Kree'Arra", "K'ril Tsutsaroth",
     "Lunar Chests", "Mimic",
-    "Nex", "Nightmare", "Obor",
-    "Phantom Muspah", "Phosani's Nightmare",
+    "Nex", "Nightmare", "Phosani's Nightmare", 
+    "Obor", "Phantom Muspah",
     "Sarachnis", "Scorpia", "Scurrius", "Skotizo", "Sol Heredit", "Spindel",
     "Tempoross", "The Gauntlet", "The Corrupted Gauntlet",
-    "The Hueycoatl", "The Leviathan", "The Whisperer",
+    "The Hueycoatl", "The Leviathan", "The Royal Titans", "The Whisperer",
     "Theatre of Blood", "Theatre of Blood: Hard Mode", "Thermonuclear Smoke Devil",
     "Tombs of Amascut", "Tombs of Amascut: Expert Mode",
     "TzKal-Zuk", "TzTok-Jad", "Vardorvis", "Venenatis", "Vet'ion", "Vorkath",
-    "Wintertodt", "Zalcano", "Zulrah",
+    "Wintertodt", "Yama", "Zalcano", "Zulrah",
 ]
 
 
@@ -170,11 +172,13 @@ if __name__ == "__main__":
         mdata_base_setters = mdata_base_cls["setters"]
         mdata_init_vars_fn = mdata_base_cls["init_call_fn"]
 
+        assert len(mdata_base_vars) == len(mdata_base_setters)
+
         pyfile = str(pathlib.Path(__file__).parent.absolute()) + f"/{name}.py"
         with open(pyfile, "w") as pyf:
             # Base class
             base_getters = [make_getter(mdata) for mdata in mdata_base_vars]
-            base_setters = [make_setter(mdata_base_vars[idx]) for idx in range(len(mdata_base_vars)) if mdata_base_setters[idx]]
+            base_setters = [make_setter(var) for var,setter in zip(mdata_base_vars, mdata_base_setters) if setter]
 
             # Base Collection class
             coll_vars = [convert_to_var_name(v) for v in mdata_list]

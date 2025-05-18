@@ -5,10 +5,11 @@ class ICallbackMapper(ABC):
     def __init__(self):
         self._cbs: Dict[str, Callable] = dict()
 
-    def register(self, cb_name: str, cb_fn: Callable):
-        if cb_name in self._cbs:
-            raise ValueError(f"Duplicate callbacks for {cb_name}")
-        self._cbs[cb_name] = cb_fn
+    def register(self, cb_fn: Callable):
+        fn_name = cb_fn.__name__
+        if fn_name in self._cbs:
+            raise ValueError(f"Duplicate callbacks for {fn_name}")
+        self._cbs[fn_name] = cb_fn
 
     def call(self, cb_str: str, **kwargs) -> bool:
         if cb_str not in self._cbs:

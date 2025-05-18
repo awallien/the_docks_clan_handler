@@ -21,7 +21,7 @@ class ClanMemberFieldsEnum(Enum):
     
     @classmethod
     def values(cls):
-        return list(cls.__members__.values())
+        return [field.value for field in cls]
 
 
 class ClanMemberDFDAO(IDao):
@@ -29,7 +29,7 @@ class ClanMemberDFDAO(IDao):
 
     def __init__(self):
         self._df_db = DataFrameDatabase(prim_cols=(ClanMemberFieldsEnum.MEMBER.value,), 
-                                        columns=ClanMemberFieldsEnum.values(),
+                                        cols=ClanMemberFieldsEnum.values(),
                                         prim_cols_sort_fn=lambda col: col.str.lower())
         self._db_cache = DataFrameDatabaseDirCache()
 
@@ -109,6 +109,9 @@ class ClanMemberDFDAO(IDao):
 
     def load_db(self, fname='', cache_f_idx=-1) -> bool:
         return self._df_db.load_from_cache(fname, cache_f_idx)
+    
+    def db_is_loaded(self):
+        return self._df_db.db_is_loaded()
     
     def cache_db_list(self) -> List[Tuple[int, str, str]]:
         return self._db_cache.cache_list()

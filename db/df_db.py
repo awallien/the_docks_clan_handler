@@ -19,8 +19,12 @@ class DatabaseColumn:
         # only used if dtype is 'category'
         self._categories: List[Union[str, int]] = categories
 
-        assert self._dtype == 'category' and self._categories, 
-                "`categories` must NOT be None if dtype is `category`"
+        # Check if dtype is valid
+        if self._dtype == "category":
+            assert isinstance(self._categories, list), \
+                "`categories` must be a list if dtype is `category`"
+            assert all(isinstance(cat, (str, int)) for cat in self._categories), \
+                "`categories` must be a list of str or int if dtype is `category`"
     
     @property
     def name(self):
@@ -55,6 +59,9 @@ class DatabaseColumn:
             self.dtype == value.dtype and
             self.categories == self.categories
         )
+    
+    def __repr__(self):
+        return f"DatabaseColumn(name={self.name}, default={self.default}, dtype={self.dtype}, categories={self.categories})"
 
 class DatabaseRow:
     """Database row containing a set of values, (i.e. ContentValues in java)"""
@@ -77,7 +84,7 @@ class DatabaseRow:
 class DataFrameDatabaseDirCache:
 
     def __init__(self):
-        self._cache_dir : str   = f"{str(pathlib.Path(__file__).parent.absolute())}/cache"
+        self._cache_db_dir : str   = f"{str(pathlib.Path(__file__).parent.absolute())}/cache"
         
         if not os.path.isdir(self._cache_db_dir):
             os.mkdir(self._cache_db_dir)
@@ -91,8 +98,8 @@ class DataFrameDatabaseDirCache:
         """
         files = []
 
-        for idx, file in enumerate(os.listdir(self._cache_dir)):
-            fpath = os.path.join(self._cache_dir, file)
+        for idx, file in enumerate(os.listdir(self._cache_db_dir)):
+            fpath = os.path.join(self._cache_db_dir, file)
             last_modified_datetime = datetime.fromtimestamp(os.path.getmtime(fpath))
             files.append((idx, file, str(last_modified_datetime)))
 
@@ -101,7 +108,7 @@ class DataFrameDatabaseDirCache:
 
     def save(self, df_db: pd.DataFrame, fname: str):
         """Save to cache"""
-        fpath = os.path.join(self._cache_dir, fname)
+        fpath = os.path.join(self._cache_db_dir, fname)
         df_db.to_parquet(fpath)
         print(f"DB saved successfully to {fpath}")
 
@@ -131,7 +138,7 @@ class DataFrameDatabaseDirCache:
         if not cache_file:
             return False
         
-        os.remove(os.path.join(self._cache_dir, cache_file))
+        os.remove(os.path.join(self._cache_db_dir, cache_file))
         return True
 
 class DataFrameDatabase:
@@ -150,7 +157,6 @@ class DataFrameDatabase:
             all([prim_col in self._cols for prim_col in self._prim_cols]), \
             "Primary column is NOT found in list of columns"
         
-
         self._create_table()
     
     @property
@@ -166,7 +172,7 @@ class DataFrameDatabase:
         
         # Ensure row is not already present in db
         query_expr = '&'.join(
-            [f"{db_col.query_expr(obj.get(db_col), "==")}" for db_col in self._prim_cols]
+            [f"{db_col.query_expr(obj.get(db_col), '==')}" for db_col in self._prim_cols]
         )
         queried_df = self._db.query(query_expr)
         if not queried_df.empty():
@@ -227,7 +233,7 @@ class DataFrameDatabase:
 
         # Check if exists in the database
         query_expr = '&'.join(
-            [f"{db_col.query_expr(obj.get(db_col), "==")}" for db_col in self._prim_cols]
+            [f"{db_col.query_expr(obj.get(db_col), '==')}" for db_col in self._prim_cols]
         )
         queried_df = self._db.query(query_expr)
         queried_df_len = len(queried_df)
@@ -339,6 +345,9 @@ class DataFrameDatabase:
         )
 
         return True
+    
+    def db_is_loaded(self) -> bool:
+        return self._db is not None
 
     def _create_table(self) -> bool:
         """Create DataFrame table"""

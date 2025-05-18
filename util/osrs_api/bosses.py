@@ -87,6 +87,7 @@ BOSSES = [
 	"The Corrupted Gauntlet",
 	"The Hueycoatl",
 	"The Leviathan",
+	"The Royal Titans",
 	"The Whisperer",
 	"Theatre of Blood",
 	"Theatre of Blood: Hard Mode",
@@ -100,6 +101,7 @@ BOSSES = [
 	"Vet'ion",
 	"Vorkath",
 	"Wintertodt",
+	"Yama",
 	"Zalcano",
 	"Zulrah",
 ]
@@ -155,6 +157,7 @@ class Bosses:
         self._the_corrupted_gauntlet = Boss("The Corrupted Gauntlet", -1, -1)
         self._the_hueycoatl = Boss("The Hueycoatl", -1, -1)
         self._the_leviathan = Boss("The Leviathan", -1, -1)
+        self._the_royal_titans = Boss("The Royal Titans", -1, -1)
         self._the_whisperer = Boss("The Whisperer", -1, -1)
         self._theatre_of_blood = Boss("Theatre of Blood", -1, -1)
         self._theatre_of_blood_hard_mode = Boss("Theatre of Blood: Hard Mode", -1, -1)
@@ -168,6 +171,7 @@ class Bosses:
         self._vetion = Boss("Vet'ion", -1, -1)
         self._vorkath = Boss("Vorkath", -1, -1)
         self._wintertodt = Boss("Wintertodt", -1, -1)
+        self._yama = Boss("Yama", -1, -1)
         self._zalcano = Boss("Zalcano", -1, -1)
         self._zulrah = Boss("Zulrah", -1, -1)
 
@@ -368,6 +372,10 @@ class Bosses:
         return self._the_leviathan
 
     @property
+    def the_royal_titans(self):
+        return self._the_royal_titans
+
+    @property
     def the_whisperer(self):
         return self._the_whisperer
 
@@ -418,6 +426,10 @@ class Bosses:
     @property
     def wintertodt(self):
         return self._wintertodt
+
+    @property
+    def yama(self):
+        return self._yama
 
     @property
     def zalcano(self):
