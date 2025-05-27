@@ -33,20 +33,21 @@ docks_clan_commands:
       RANK_D:   "D"
       RANK_O:   "O"
 
-  _groupings_:
-    clan_member_grouping:
-      name:
-        _desc_: "Name of clan member"
-        _type_: "string"
-      joined_date:
-        _desc_: "Joined date in yyyy-mm-dd"
-        _type_: "date"
-      rank:
-        _desc_: "Rank of clan member"
-        _type_: "rank_enum"
-      total_xp:
-        _desc_: "T/F to update total xp"
-        _type_: "bool"
+    name:
+      _desc_: "Name of clan member"
+      _type_: "string"
+
+    joined_date:
+      _desc_: "Joined date in yyyy-mm-dd"
+      _type_: "date"
+
+    rank:
+      _desc_: "Rank of clan member"
+      _type_: "rank_enum"
+
+    total_xp:
+      _desc_: "T/F to update total xp"
+      _type_: "bool"
     
   _configs_:
     member:
@@ -55,27 +56,30 @@ docks_clan_commands:
       _validate_: "db_is_loaded"
       add:
         _callback_: "add_clan_member_cb"
-        _groupings_:
-          - clan_member_grouping:
-            - name:
-              _mandatory_: true
-            - joined_date:
-              _mandatory_: true
+        name:
+          _mandatory_: true
+          _type_: "name"
+        joined_date:
+          _mandatory_: true
+          _type_: "joined_date"
+
       update:
         _callback_: "update_clan_member_cb"
-        _groupings_:
-          - clan_member_grouping:
-            - name:
-              _mandatory_: true
-            - joined_date
-            - rank
-            - total_xp
+        name:
+          _mandatory_: true
+          _type_: "name"
+        joined_date:
+          _type_: "joined_date"
+        rank:
+          _type_: "rank"
+        total_xp:
+          _type_: "total_xp"     
+        
       delete:
         _callback_: "delete_clan_member_cb"
-        _groupings_:
-          - clan_member_grouping:
-            - name:
-              _mandatory_: true
+        name:
+          _type_: "name"
+          _mandatory_: true
 
     db:
       _incomplete_: true
@@ -99,14 +103,10 @@ docks_clan_commands:
     
     debug:
       _callback_: "debug_cb"
-      _oneof_:
-        _mandatory_: "true"
-        enable:
-          _desc_: "Enable debug log"
-          _type_: "empty"
-        disable:
-          _desc_: "Disable debug log"
-          _type_: "empty"
+      enable:
+        _desc_: "Enable debug log to file"
+        _type_: "bool"
+        _mandatory_: true
 
   _opers_:
     member:
@@ -122,11 +122,12 @@ docks_clan_commands:
     members:
       _desc_: "clan members' info"
       _callback_: "show_clan_members_cb"
-      _groupings_:
-        - clan_member_grouping:
-          - joined_date
-          - rank
-          - total_xp
+      joined_date:
+        _type_: "joined_date"
+      rank:
+        _type_: "rank"
+      total_xp:
+        _type_: "total_xp"
       last_rank_date:
         _desc_: "Last rank date"
         _type_: "date"

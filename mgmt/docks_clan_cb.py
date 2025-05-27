@@ -48,13 +48,13 @@ def delete_clan_member_cb(**kwargs) -> bool:
     
     return docks_clan_cb.clan_member_service.delete_member(kwargs['name'])
 
-def save_db_cb():
+def save_db_cb(**kwargs):
     pass
 
-def load_db_cb():
+def load_db_cb(**kwargs):
     pass
 
-def debug_cb():
+def debug_cb(**kwargs):
     pass
 
 def show_clan_members_cb(**kwargs):

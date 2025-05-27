@@ -1,6 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, List, Optional, Self, Union, Any
+from typing import Callable, Dict, List, Optional, Self, Set, Union, Any
+from collections import OrderedDict
 import pathlib
 import os
 import yaml
@@ -10,6 +11,11 @@ from .mgmt_abc import ICallbackMapper
 
 yaml_cb_fns_mapper: Dict[str, ICallbackMapper] = {
     "docks_clan_commands": docks_clan_cb
+}
+
+base_types: Set[str] = {
+    "string", "date", "uint",
+    "enum", "bool", "empty"
 }
 
 class Node(ABC):
@@ -60,7 +66,6 @@ class YamlLeafNode(Node):
         if data:
             if len(data) > 1:
                 raise TypeError(f"Data received more than one leaf value: {data}")
-            
             for leaf_name, leaf_values in data.items():
                 leaf_type = leaf_values.get("_type_", None)
                 desc_type = leaf_values.get("_desc_", "")
@@ -79,7 +84,7 @@ class YamlLeafNode(Node):
                         raise TypeError(f"Type {leaf_type} is not found or supported")
 
                 return cls(leaf_name, leaf_type, desc_type, fn_cb, mandatory)
-    
+
     def process(self, cmd_lst: List[str]) -> bool:
         pass
 
@@ -104,7 +109,7 @@ class YamlEnumNode(Node):
             desc = values.get("_desc_", "")
             enum_type = values.get("_type_", None)
 
-            if enum_type != "enum":
+            if not enum_type == "enum":
                 raise TypeError(f"Enum type is missing or invalid for {name}")
 
             # Remove "_desc_" and "_type_" keys from values without modifying values itself
@@ -115,6 +120,32 @@ class YamlEnumNode(Node):
         pass
             
 
+class OneOfNode(Node):
+    def __init__(self, values, mandatory):
+        self._leafs: Dict[str, YamlLeafNode] = values
+        super().__init__(None, None, None, None, mandatory) 
+
+    @classmethod
+    def parse_yaml(cls, data: dict, typedefs: YamlTypeDefs) -> Self:
+        if data:
+            mandatory = data.get("_mandatory_", False)
+            leafs = dict()
+            for name, value in data.items():
+                match name:
+                    case "_mandatory_": 
+                        continue
+                    case _ if name in leafs:
+                        raise ValueError(f"Duplicate leaf name found in _oneof_: {name}")
+                    case _:
+                        leafs[name] = YamlLeafNode.parse_yaml({name:value}, typedefs)
+            
+            return cls(leafs, mandatory)
+    
+    
+    def process(self, cmd_lst:List[str]) -> bool:
+        pass
+
+
 class YamlTypeDefs:
 
     def __init__(self, type_defs, enums):
@@ -123,7 +154,7 @@ class YamlTypeDefs:
 
     @classmethod
     def parse_yaml(cls, data: dict) -> Self:
-        """Parse _macros_ from the yaml including types: enum"""
+        """Parse _typedefs_ from the yaml including types: enum"""
         if data:
             enums = dict()
             type_defs = dict()
@@ -136,13 +167,13 @@ class YamlTypeDefs:
                 if name in type_defs:
                     raise TypeError(f"Duplicate name in type defs: {name}")
 
+                if values_type == "enum":
+                    enums[name] = YamlEnumNode.parse_yaml({name: values})
+                elif not(values_type in base_types or values_type in type_defs):
+                    raise TypeError(f"Invalid type in typedefs: {values_type}")
+
                 type_defs[name] = values_type
-                match values_type:
-                    case "enum":
-                        enums[name] = YamlEnumNode.parse_yaml({name: values})
-                    case _:
-                        raise TypeError(f"Invalid type in macros: {values_type}")
-                
+
             return cls(type_defs, enums)
         
     def contains(self, member: str) -> bool:
@@ -158,61 +189,59 @@ class YamlTypeDefs:
             case _:
                 raise TypeError(f"Should not reach here, something's wrong: {self._type_defs[member]}")
     
-
-class YamlGroupings:
-
-    def __init__(self, groupings, typedefs):
-        self._groupings : dict = groupings
-        self._typedefs: YamlTypeDefs = typedefs
-
-    @classmethod
-    def parse_yaml(cls, data, typedefs: YamlTypeDefs) -> Self:
-        """Parse _groupings_ from yaml"""
-        if data:
-            groupings = dict()
-            for grouping_name, values in data.items():
-                if grouping_name in groupings:
-                    raise TypeError(f"Duplicate name in groupings: {grouping_name}")
-                leaf_nodes = dict()
-                for leaf_name, leaf_values in values.items():
-                    if leaf_name in leaf_nodes:
-                        raise TypeError(f"Duplicate leaf name '{leaf_name}' in grouping '{grouping_name}'")
-                    leaf_nodes[leaf_name] = YamlLeafNode.parse_yaml({leaf_name: leaf_values}, typedefs)
-                groupings[grouping_name] = leaf_nodes
-            return cls(groupings, typedefs)
-    
-    def contains(self, member: str) -> bool:
-        return member in self._groupings
-
-
 class YamlBlock:
 
     def __init__(
         self,
         name,
         desc,
+        sub_blocks,
         validate_fn=None,
         cb_fn=None,
         incomplete=False,
-        one_of=None
     ):
         self._name: str = name
         self._desc: str = desc
+        self._sub_blocks: Dict[str, Union[YamlBlock, YamlLeafNode]] = sub_blocks
         self._incomplete: bool = incomplete
         self._cb_fn: Optional[Callable] = cb_fn
         self._validate_fn: Optional[Callable] = validate_fn
-        self._one_of: Optional[List[YamlLeafNode]] = one_of
 
     @classmethod
     def parse_yaml(
         cls,
         data: dict,
-        type_defs: YamlTypeDefs,
-        groupings: YamlGroupings,
-        mapper_cb: Any
+        typedefs: YamlTypeDefs,
+        mapper_cb: ICallbackMapper
     ) -> Self:
         """Parse Configs commands to Blocks - Blocks can contain sub blocks or leaf/grouping nodes"""
-        
+        if data:
+            blocks = dict()
+            one_ofs = OrderedDict()
+            incomplete = False
+            desc = ""
+            validate = None
+            cb_fn = None
+            for name, value,in data.items():
+                match name:
+                    case "_incomplete_":
+                        incomplete = value
+                    case "_desc_":
+                        desc = value
+                    case "_validate_":
+                        assert value in mapper_cb
+                        validate = value
+                    case "_callback_":
+                        assert value in mapper_cb
+                        cb_fn = value
+                    case _ if type(value) == dict and "_type_" in value:
+                        blocks[name] = YamlLeafNode.parse_yaml({name:value}, typedefs)
+                    case "_oneof_":
+                        one_ofs[f"oneof_{name}_{hash(str(value))}"] = OneOfNode.parse_yaml(value, typedefs)
+                    case _:
+                        blocks[name] = YamlBlock.parse_yaml(value, typedefs, mapper_cb)
+            return cls(name, desc, blocks, validate, cb_fn, incomplete)
+            
 
 
     def process(self, cmd_lst: List[str]) -> bool:
@@ -229,7 +258,6 @@ class YamlConfigs:
         cls,
         data: dict,
         type_defs: YamlTypeDefs,
-        groupings: YamlGroupings,
         mapper_cb: Any
     ) -> Self:
         """Parse Configs commands to Blocks"""
@@ -237,7 +265,7 @@ class YamlConfigs:
         for name, values in data.items():
             if name in blocks:
                 raise TypeError(f"Duplicate config command found: {name}")
-            blocks[name] = YamlBlock.parse_yaml({name: values}, type_defs, groupings, mapper_cb)
+            blocks[name] = YamlBlock.parse_yaml({name: values}, type_defs, mapper_cb)
         return cls(blocks)
 
     def process(self, cmd_list: List[str]) -> bool:
@@ -256,7 +284,6 @@ class YamlOpers:
         cls,
         data: dict,
         type_defs: YamlTypeDefs,
-        groupings: YamlGroupings,
         mapper_cb: Any
     ) -> Self:
         """Parse Opers commands to Opers Blocks"""       
@@ -264,7 +291,7 @@ class YamlOpers:
         for name, values in data.items():
             if name in blocks:
                 raise TypeError(f"Duplicate oper command found: {name}")
-            blocks[name] = YamlBlock.parse_yaml({name: values}, type_defs, groupings, mapper_cb)
+            blocks[name] = YamlBlock.parse_yaml({name: values}, type_defs, mapper_cb)
         return cls(blocks)
             
     def process(self, cmd_list: List[str]) -> bool:
@@ -290,10 +317,13 @@ class YamlRootNode:
         if not cmd_list:
             return True
 
-        match cmd_list[0]:
+        start_cmd = cmd_list[0].lower()
+
+        match start_cmd:
             case "show":
                 return self._opers.process(cmd_list[1:])
             case _:
+                #TODO: parse "no" and pass into configs
                 return self._configs.process(cmd_list[1:])
 
 class YamlCommandParser:
@@ -302,7 +332,7 @@ class YamlCommandParser:
         self._yaml_dir: str = os.path.join(str(pathlib.Path(__file__).parent.absolute()),"yaml")
         self._yaml_tree : YamlRootNode = None
 
-    def init_yaml_commands(self, root_name: str) -> Self:
+    def parse(self, root_name: str) -> Self:
         with open(os.path.join(self._yaml_dir, f"{root_name}.yaml")) as fp:
             yaml_data = yaml.safe_load(fp.read())
             assert yaml_data is not None, f"{root_name} yaml file is invalid"
@@ -319,20 +349,15 @@ class YamlCommandParser:
         tag = list(yaml_data.keys())[0]    
         if (mapper_cb := yaml_cb_fns_mapper.get(tag, None)) is None:
             raise ValueError(f"Unable to find callback functions for {tag}")
-        
+
         type_defs = YamlTypeDefs.parse_yaml(yaml_data[tag].get("_typedefs_", {}))
 
-        groupings = YamlGroupings.parse_yaml(yaml_data[tag].get("_groupings_", {}),
-                                             type_defs)
-    
         configs = YamlConfigs.parse_yaml(yaml_data[tag].get("_configs_", {}),
                                          type_defs,
-                                         groupings,
                                          mapper_cb)
 
         opers = YamlOpers.parse_yaml(yaml_data[tag].get("_opers_", {}),
                                      type_defs,
-                                     groupings,
                                      mapper_cb)
             
         self._yaml_tree = YamlRootNode(tag, mapper_cb, configs, opers)

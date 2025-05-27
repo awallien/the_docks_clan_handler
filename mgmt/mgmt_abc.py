@@ -15,3 +15,6 @@ class ICallbackMapper(ABC):
         if cb_str not in self._cbs:
             raise ValueError(f"Callback does not exist: {cb_str}")
         return self._cbs[cb_str](**kwargs)
+    
+    def __contains__(self, item):
+        return item in self._cbs

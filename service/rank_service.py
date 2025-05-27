@@ -97,7 +97,7 @@ class RankService:
             return chk_avg_range_and(left_val, right_val, non_cmb_avg)
 
         achieve_rank_reqs = \
-        (((0,69), chk_avg_range_or, ClanMemberRankEnum.RANK_5)
+        (((0,69), chk_avg_range_or, ClanMemberRankEnum.RANK_5),
          ((70,74), chk_avg_range_or, ClanMemberRankEnum.RANK_6),
          ((75,79), chk_avg_range_or, ClanMemberRankEnum.RANK_7),
          ((80,84), chk_avg_range_or, ClanMemberRankEnum.RANK_8),
