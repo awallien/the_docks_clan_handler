@@ -1,7 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Callable, Dict, List, Optional, Self, Set, Union, Any
-from collections import OrderedDict
 import pathlib
 import os
 import yaml
@@ -48,12 +47,21 @@ class Node(ABC):
     
     @classmethod
     @abstractmethod
-    def parse_yaml(cls, data) -> bool:
+    def parse_yaml(cls, data) -> Any:
         pass
 
     @abstractmethod
-    def process(self, cmd_lst:List[str]) -> bool:
+    def process(self, cmd_lst:List[str]) -> Any:
         pass
+
+    def _validate_process_syntax(self, cmd, cmd_len=None) -> bool:
+        def raise_msg(msg):
+            return f"Invalid syntax: {msg}"
+
+        if cmd_len and not cmd_len == len(cmd):
+            raise SyntaxError(raise_msg(f"Length of command does not match length {cmd_len}"))
+        if "=" not in cmd:
+            raise SyntaxError(raise_msg(f"{cmd} does not contain '='"))
 
 
 class YamlLeafNode(Node):
@@ -85,7 +93,7 @@ class YamlLeafNode(Node):
 
                 return cls(leaf_name, leaf_type, desc_type, fn_cb, mandatory)
 
-    def process(self, cmd_lst: List[str]) -> bool:
+    def process(self, cmd_lst: List[str]) -> Any:
         pass
 
 class YamlEnumNode(Node):
@@ -142,9 +150,12 @@ class OneOfNode(Node):
             return cls(leafs, mandatory)
     
     
-    def process(self, cmd_lst:List[str]) -> bool:
-        pass
-
+    def process(self, cmd_lst:List[str]) -> Any:
+        self._validate_process_syntax(cmd_lst, 1)
+        name,value = cmd_lst[0].split("=")
+        if name not in self._leafs:
+            raise ValueError(f"{name} not found")
+        return self._leafs[name].process([value])
 
 class YamlTypeDefs:
 
@@ -217,7 +228,6 @@ class YamlBlock:
         """Parse Configs commands to Blocks - Blocks can contain sub blocks or leaf/grouping nodes"""
         if data:
             blocks = dict()
-            one_ofs = OrderedDict()
             incomplete = False
             desc = ""
             validate = None
@@ -237,15 +247,13 @@ class YamlBlock:
                     case _ if type(value) == dict and "_type_" in value:
                         blocks[name] = YamlLeafNode.parse_yaml({name:value}, typedefs)
                     case "_oneof_":
-                        one_ofs[f"oneof_{name}_{hash(str(value))}"] = OneOfNode.parse_yaml(value, typedefs)
+                        blocks[f"oneof_{name}_{hash(str(value))}"] = OneOfNode.parse_yaml(value, typedefs)
                     case _:
                         blocks[name] = YamlBlock.parse_yaml(value, typedefs, mapper_cb)
             return cls(name, desc, blocks, validate, cb_fn, incomplete)
             
-
-
     def process(self, cmd_lst: List[str]) -> bool:
-        ...
+        pass
 
 
 class YamlConfigs:
@@ -271,7 +279,7 @@ class YamlConfigs:
     def process(self, cmd_list: List[str]) -> bool:
         if (not cmd_list) or (block := self._blocks.get(cmd_list[0], None)) is None:
             return False
-        return block.process(cmd_list[0])
+        return block.process(cmd_list[1:])
 
 
 class YamlOpers:
