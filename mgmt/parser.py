@@ -4,6 +4,7 @@ from typing import Callable, Dict, List, Optional, Self, Set, Union, Any
 import pathlib
 import os
 import yaml
+from datetime import datetime
 
 from .docks_clan_cb import docks_clan_cb
 from .mgmt_abc import ICallbackMapper
@@ -16,6 +17,110 @@ base_types: Set[str] = {
     "string", "date", "uint",
     "enum", "bool", "empty"
 }
+
+class Op():
+    def __init__(self, op: str, value: str):
+        self.op: str = op
+        self.value: str = value
+
+    @classmethod
+    def parse(cls, op: str, value: str) -> Union[Self, None]:
+        if op not in ["=", "<", ">", ''] or not value:
+            return None
+        return cls(op, value)
+        
+    def expr_str(self, other: str) -> str:
+        if not self.op or not other:
+            return None
+        return f"{other} {self.op} {self.value}"
+
+
+class NodeType(ABC):
+    def __init__(self):
+        pass
+
+    def raise_unsupported_ops(self, op: str, ops: List[str]) -> False:
+        if op not in ops:
+            raise ValueError(f"Operation '{op}' is not supported. Supported operations are: {', '.join(ops)}")
+        return False
+
+    @abstractmethod   
+    def eval(self, op: str, value: str, **kwargs) -> Union[Op, None]:
+        pass
+
+
+class EmptyType(NodeType):
+    def __init__(self):
+        super().__init__()
+
+    def eval(self, op: str, value: str, **kwargs) -> Union[Op, None]:
+        if op or value:
+            raise ValueError(f"EmptyNode({op}, {value}) should not have any operation or value")
+        return Op.parse('', '')
+
+
+class BoolType(NodeType):
+    def __init__(self):
+        super().__init__()
+
+    def eval(self, op: str, value: str, **kwargs) -> Union[Op, None]:
+        if (
+            self.raise_unsupported_ops(op, ["="])
+            and isinstance(value, str)
+            and (val := value.lower()) in ["true", "false"]
+        ):
+            return Op.parse(op, val)
+        raise ValueError(f"BoolNode({op}, {value}) should only have '=' operation with 'true' or 'false' value")
+
+
+class StringType(NodeType):
+    def __init__(self):
+        super().__init__()
+
+    def eval(self, op: str, value: str, **kwargs) -> Union[Op, None]:
+        if self.raise_unsupported_ops(op, ["="]) and isinstance(value, str):
+            return Op.parse(op, value)
+        raise NotImplementedError(f"StringNode({op}, {value}) only supports '=' operation with a non-empty string value")
+
+
+class UIntType(NodeType):
+    def __init__(self):
+        super().__init__()
+
+    def eval(self, op: str, value: str, **kwargs) -> Union[Op, None]:
+        if not value.isdigit() and int(value) < 0:
+            raise ValueError(f"UIntNode({op}, {value}) should only have a non-negative integer value")
+        self.raise_unsupported_ops(op, ["=", "<", ">"])
+        return Op.parse(op, value)
+
+
+class DateType(NodeType):
+    def __init__(self):
+        super().__init__()
+    
+    def eval(self, op: str, value: str, **kwargs) -> Union[Op, None]:
+        try:
+            dt = datetime.strptime(value, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError(f"DateNode({op}, {value}) '{value}' is not a valid datetime string")
+
+        self.raise_unsupported_ops(op, ["=", "<", ">"])
+        return Op.parse(op, dt.strftime("%Y-%m-%d"))
+
+
+class EnumType(NodeType):
+    def __init__(self):
+        super().__init__()
+        
+    def eval(self, op: str, value: str, **kwargs) -> Union[Op, None]:
+        self.raise_unsupported_ops(op, ["=", "<", ">"])
+        rank_def: YamlEnumNode = kwargs.get("rank_def", None)
+        if rank_def is None:
+            raise ValueError(f"EnumNode({op}, {value}) requires 'rank_def' in kwargs for evaluation")
+        if not rank_def.contains_value(value):
+            raise ValueError(f"EnumNode({op}, {value}) '{value}' is not a valid enum value in {rank_def.name}")
+        return Op.parse(op, value)
+
 
 class Node(ABC):
     def __init__(self, name, def_type, desc, fn_cb=None, mandatory=False):
@@ -65,7 +170,8 @@ class Node(ABC):
 
 
 class YamlLeafNode(Node):
-    def __init__(self, name, def_type, desc, fn_cb, mandatory):
+    def __init__(self, name, def_type, desc, fn_cb, mandatory, node_type):
+        self.node_type: NodeType = node_type
         super().__init__(name, def_type, desc, fn_cb, mandatory)
     
     @classmethod
@@ -84,14 +190,26 @@ class YamlLeafNode(Node):
                     raise TypeError(f"Leaf value does not exist for {leaf_name}")
                 
                 match leaf_type:
-                    case "empty" | "string" | "uint" | "date" | "bool" :
-                        break
+                    case "empty":
+                        node_type = EmptyType()
+                    case "string":
+                        node_type = StringType()
+                    case "uint":
+                        node_type = UIntType()
+                    case "date":
+                        node_type = DateType()
+                    case "bool":
+                        node_type = BoolType()
                     case _ if typedefs.contains(leaf_type):
-                        break
+                        match typedefs.get(leaf_type).def_type:
+                            case "enum":
+                                node_type = EnumType()
+                            case _:
+                                raise TypeError(f"Type {leaf_type} is not found. Should not reach here.")
                     case _:
                         raise TypeError(f"Type {leaf_type} is not found or supported")
 
-                return cls(leaf_name, leaf_type, desc_type, fn_cb, mandatory)
+            return cls(leaf_name, leaf_type, desc_type, fn_cb, mandatory, node_type)
 
     def process(self, cmd_lst: List[str]) -> Any:
         pass
@@ -105,8 +223,8 @@ class YamlEnumNode(Node):
     def contains_member(self, member):
         return member in self._values.keys()
     
-    def get_value(self, member):
-        return self._values.get(member, None)
+    def contains_value(self, val):
+        return val in self._values.values()
     
     @classmethod
     def parse_yaml(cls, data: dict) -> Self:
@@ -136,12 +254,12 @@ class OneOfNode(Node):
     @classmethod
     def parse_yaml(cls, data: dict, typedefs: YamlTypeDefs) -> Self:
         if data:
-            mandatory = data.get("_mandatory_", False)
+            mandatory = False
             leafs = dict()
             for name, value in data.items():
                 match name:
                     case "_mandatory_": 
-                        continue
+                        mandatory = True
                     case _ if name in leafs:
                         raise ValueError(f"Duplicate leaf name found in _oneof_: {name}")
                     case _:
@@ -149,13 +267,15 @@ class OneOfNode(Node):
             
             return cls(leafs, mandatory)
     
-    
     def process(self, cmd_lst:List[str]) -> Any:
         self._validate_process_syntax(cmd_lst, 1)
         name,value = cmd_lst[0].split("=")
         if name not in self._leafs:
             raise ValueError(f"{name} not found")
         return self._leafs[name].process([value])
+    
+    def __contains__(self, item: str) -> bool:
+        return item in self._leafs
 
 class YamlTypeDefs:
 
@@ -190,13 +310,13 @@ class YamlTypeDefs:
     def contains(self, member: str) -> bool:
         return member in self._type_defs
     
-    def get(self, member: str, value: str) -> Union[str]:
+    def get(self, member: str) -> Union[Node]:
         if member not in self._type_defs:
-            return None
+            raise ValueError(f"Member {member} not found in type definitions")
         
         match self._type_defs[member]:
             case "enum":
-                return self._enums[member].get_value(value)
+                return self._enums[member]
             case _:
                 raise TypeError(f"Should not reach here, something's wrong: {self._type_defs[member]}")
     
@@ -232,25 +352,27 @@ class YamlBlock:
             desc = ""
             validate = None
             cb_fn = None
-            for name, value,in data.items():
-                match name:
+            block_name = list(data.keys())[0]
+            block_values = data[block_name]
+            for values_name, values_value in block_values.items():
+                match values_name:
                     case "_incomplete_":
-                        incomplete = value
+                        incomplete = values_value
                     case "_desc_":
-                        desc = value
+                        desc = values_value
                     case "_validate_":
-                        assert value in mapper_cb
-                        validate = value
+                        assert values_value in mapper_cb
+                        validate = values_value
                     case "_callback_":
-                        assert value in mapper_cb
-                        cb_fn = value
-                    case _ if type(value) == dict and "_type_" in value:
-                        blocks[name] = YamlLeafNode.parse_yaml({name:value}, typedefs)
+                        assert values_value in mapper_cb
+                        cb_fn = values_value
+                    case _ if "_type_" in values_value:
+                        blocks[values_name] = YamlLeafNode.parse_yaml({values_name:values_value}, typedefs)
                     case "_oneof_":
-                        blocks[f"oneof_{name}_{hash(str(value))}"] = OneOfNode.parse_yaml(value, typedefs)
+                        blocks[f"{values_name}_{hash(str(values_value))}"] = OneOfNode.parse_yaml(values_value, typedefs)
                     case _:
-                        blocks[name] = YamlBlock.parse_yaml(value, typedefs, mapper_cb)
-            return cls(name, desc, blocks, validate, cb_fn, incomplete)
+                        blocks[values_name] = YamlBlock.parse_yaml({values_name:values_value}, typedefs, mapper_cb)
+            return cls(block_name, desc, blocks, validate, cb_fn, incomplete)
             
     def process(self, cmd_lst: List[str]) -> bool:
         pass
@@ -325,9 +447,7 @@ class YamlRootNode:
         if not cmd_list:
             return True
 
-        start_cmd = cmd_list[0].lower()
-
-        match start_cmd:
+        match cmd_list[0].lower():
             case "show":
                 return self._opers.process(cmd_list[1:])
             case _:
