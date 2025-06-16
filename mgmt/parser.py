@@ -25,13 +25,13 @@ class Op():
 
     @classmethod
     def parse(cls, op: str, value: str) -> Union[Self, None]:
-        if op not in ["=", "<", ">", ''] or not value:
+        if op not in ["=", "<", ">", '']:
             return None
         return cls(op, value)
         
     def expr_str(self, other: str) -> str:
         if not self.op or not other:
-            return None
+            return ""
         return f"{other} {self.op} {self.value}"
 
 
@@ -189,6 +189,7 @@ class YamlLeafNode(Node):
                 if leaf_type is None:
                     raise TypeError(f"Leaf value does not exist for {leaf_name}")
                 
+                leaf_type = typedefs.get_type(leaf_type) or leaf_type
                 match leaf_type:
                     case "empty":
                         node_type = EmptyType()
@@ -200,12 +201,8 @@ class YamlLeafNode(Node):
                         node_type = DateType()
                     case "bool":
                         node_type = BoolType()
-                    case _ if typedefs.contains(leaf_type):
-                        match typedefs.get(leaf_type).def_type:
-                            case "enum":
-                                node_type = EnumType()
-                            case _:
-                                raise TypeError(f"Type {leaf_type} is not found. Should not reach here.")
+                    case "enum":
+                        node_type = EnumType()       
                     case _:
                         raise TypeError(f"Type {leaf_type} is not found or supported")
 
@@ -246,37 +243,6 @@ class YamlEnumNode(Node):
         pass
             
 
-class OneOfNode(Node):
-    def __init__(self, values, mandatory):
-        self._leafs: Dict[str, YamlLeafNode] = values
-        super().__init__(None, None, None, None, mandatory) 
-
-    @classmethod
-    def parse_yaml(cls, data: dict, typedefs: YamlTypeDefs) -> Self:
-        if data:
-            mandatory = False
-            leafs = dict()
-            for name, value in data.items():
-                match name:
-                    case "_mandatory_": 
-                        mandatory = True
-                    case _ if name in leafs:
-                        raise ValueError(f"Duplicate leaf name found in _oneof_: {name}")
-                    case _:
-                        leafs[name] = YamlLeafNode.parse_yaml({name:value}, typedefs)
-            
-            return cls(leafs, mandatory)
-    
-    def process(self, cmd_lst:List[str]) -> Any:
-        self._validate_process_syntax(cmd_lst, 1)
-        name,value = cmd_lst[0].split("=")
-        if name not in self._leafs:
-            raise ValueError(f"{name} not found")
-        return self._leafs[name].process([value])
-    
-    def __contains__(self, item: str) -> bool:
-        return item in self._leafs
-
 class YamlTypeDefs:
 
     def __init__(self, type_defs, enums):
@@ -310,16 +276,21 @@ class YamlTypeDefs:
     def contains(self, member: str) -> bool:
         return member in self._type_defs
     
-    def get(self, member: str) -> Union[Node]:
+    def get_type(self, member: str) -> Union[str]:
         if member not in self._type_defs:
-            raise ValueError(f"Member {member} not found in type definitions")
+            return None
         
-        match self._type_defs[member]:
-            case "enum":
-                return self._enums[member]
-            case _:
-                raise TypeError(f"Should not reach here, something's wrong: {self._type_defs[member]}")
-    
+        def_type = self._type_defs.get(member, None)
+        seen = set()
+        while def_type and def_type not in base_types and def_type not in seen:
+            seen.add(def_type)
+            def_type = self._type_defs.get(def_type, None)
+        
+        if not def_type:
+            raise ValueError(f"Type definition for {member} is not found or invalid")
+        
+        return def_type
+
 class YamlBlock:
 
     def __init__(
@@ -368,15 +339,37 @@ class YamlBlock:
                         cb_fn = values_value
                     case _ if "_type_" in values_value:
                         blocks[values_name] = YamlLeafNode.parse_yaml({values_name:values_value}, typedefs)
-                    case "_oneof_":
-                        blocks[f"{values_name}_{hash(str(values_value))}"] = OneOfNode.parse_yaml(values_value, typedefs)
                     case _:
                         blocks[values_name] = YamlBlock.parse_yaml({values_name:values_value}, typedefs, mapper_cb)
             return cls(block_name, desc, blocks, validate, cb_fn, incomplete)
             
     def process(self, cmd_lst: List[str]) -> bool:
-        pass
+        """
+        1. Find the sub block by name
+        2. Process that block - if command is empty but block is incomplete, return
+        3. Call validation function if provided
+        4. Call callback function if provided
+        """
 
+        sub_block_name = cmd_lst[0] if cmd_lst else None
+        if not sub_block_name:
+            raise ValueError("Invalid command")
+        if sub_block_name not in self._sub_blocks:
+            raise ValueError(f"Sub block {sub_block_name} not found in {self._name}")
+
+        if not (sub_block := self._sub_blocks.get(sub_block_name, None)):
+            raise ValueError(f"Sub block {sub_block_name} not found in {self._name}")
+
+        if not (result := sub_block.process(cmd_lst[1:])) and self._incomplete:
+            return False
+        
+        if self._validate_fn and not self._validate_fn(result):
+            raise ValueError(f"Validation failed")
+        
+        if self._cb_fn:
+            self._cb_fn(result)
+
+        return True
 
 class YamlConfigs:
 

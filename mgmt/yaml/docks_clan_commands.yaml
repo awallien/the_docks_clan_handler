@@ -84,6 +84,10 @@ docks_clan_commands:
     db:
       _incomplete_: true
       _desc_: "Database Configurations"
+      new:
+        _callback_: "new_db_cb"
+        _desc_: "Create new database"
+        _type_: "string"
       save:
         _callback_: "save_db_cb"
         _desc_: "Save current working database to cache"
@@ -92,14 +96,12 @@ docks_clan_commands:
         _callback_: "load_db_cb"
         _validate_: "db_load_is_valid"
         _desc_: "Load database from cache"
-        _oneof_:
-          _mandatory_: true
-          name:
-            _desc_: "database cache name"
-            _type_: "string"
-          index:
-            _desc_: "index of database cache"
-            _type_: "uint"
+        name:
+          _desc_: "database cache name"
+          _type_: "string"
+        index:
+          _desc_: "index of database cache"
+          _type_: "uint"
     
     debug:
       _callback_: "debug_cb"
