@@ -9,12 +9,17 @@ class ICallbackMapper(ABC):
         fn_name = cb_fn.__name__
         if fn_name in self._cbs:
             raise ValueError(f"Duplicate callbacks for {fn_name}")
-        self._cbs[fn_name] = cb_fn
-
-    def call(self, cb_str: str, **kwargs) -> bool:
-        if cb_str not in self._cbs:
-            raise ValueError(f"Callback does not exist: {cb_str}")
-        return self._cbs[cb_str](**kwargs)
+        self.__setitem__(fn_name, cb_fn)
     
     def __contains__(self, item):
         return item in self._cbs
+
+    def __getitem__(self, item):
+        if item not in self._cbs:
+            raise KeyError(f"Callback {item} not found")
+        return self._cbs[item]
+    
+    def __setitem__(self, key, value):
+        if not callable(value):
+            raise TypeError(f"Value for {key} must be callable")
+        self._cbs[key] = value

@@ -22,40 +22,58 @@ class _DocksClanCommandsCallback(ICallbackMapper):
 docks_clan_cb = _DocksClanCommandsCallback()
 
 
-def db_is_loaded() -> bool:
+def db_is_loaded(**kwargs) -> bool:
     return docks_clan_cb.clan_member_service.db_is_loaded() 
 
-def db_load_is_valid(args):
-    pass
 
-def add_clan_member_cb(**kwargs) -> bool:
-    if 'name' not in kwargs:
-        return False
-    if 'joined_date' not in kwargs:
+def db_load_is_valid(**kwargs) -> bool:
+    name = kwargs.get('name', None)
+    index = kwargs.get('index', None)
+    if not (bool(name) ^ bool(index)):
         return False
     
-    name = kwargs['name']
-    joined_date = kwargs['joined_date']
+    if name:
+        return docks_clan_cb.clan_member_service.db_is_loaded()
+
+
+def add_clan_member_cb(**kwargs) -> bool:
+    name = kwargs.get('name', None)
+    joined_date = kwargs.get('joined_date', None)
+
+    if not (name and joined_date):
+        return False
 
     return docks_clan_cb.clan_member_service.add_member(name, joined_date)
 
+
 def update_clan_member_cb(**kwargs) -> bool:
-    pass
+    if not (name := kwargs.get('name', None)):
+        return False
+    joined_date = kwargs.get('joined_date', None)
+    rank = kwargs.get('rank', None)
+    total_xp = kwargs.get('total_xp', None)
+
 
 def delete_clan_member_cb(**kwargs) -> bool:
-    if 'name' not in kwargs:
+    if not (name := kwargs.get('name', None)):
         return False
-    
     return docks_clan_cb.clan_member_service.delete_member(kwargs['name'])
+
+
+def new_db_cb(**kwargs):
+    pass
 
 def save_db_cb(**kwargs):
     pass
 
+
 def load_db_cb(**kwargs):
     pass
 
+
 def debug_cb(**kwargs):
     pass
+
 
 def show_clan_members_cb(**kwargs):
     if 'name' in kwargs:
@@ -68,9 +86,11 @@ def show_clan_members_cb(**kwargs):
         filter_query = docks_clan_cb.build_query(joined_date=..., rank=..., total_xp=..., last_rank_date=...)
         members = docks_clan_cb.clan_member_service.get_members(filter_query)
 
+
 def show_db_cache_cb(_) -> None:
     db_cache_list = docks_clan_cb.clan_member_service.cache_db_list()
     print(db_cache_list)
+
 
 """ Register Commands """
 _internal_mapper_fns = [
@@ -83,7 +103,8 @@ _internal_mapper_fns = [
     load_db_cb,
     debug_cb,
     show_clan_members_cb,
-    show_db_cache_cb
+    show_db_cache_cb,
+    new_db_cb
 ]
 
 for mapper_fn in _internal_mapper_fns:

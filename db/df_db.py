@@ -346,7 +346,7 @@ class DataFrameDatabase:
 
         return True
     
-    def db_is_loaded(self) -> bool:
+    def db_is_loaded(self, name=None, index=None) -> bool:
         return self._db is not None
 
     def _create_table(self) -> bool:

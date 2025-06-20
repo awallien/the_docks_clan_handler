@@ -50,23 +50,18 @@ docks_clan_commands:
     
   _configs_:
     member:
-      _incomplete_: true
       _desc_: "Member configurations"
       _validate_: "db_is_loaded"
       add:
         _callback_: "add_clan_member_cb"
         name:
-          _mandatory_: true
           _type_: "name"
         joined_date:
-          _mandatory_: true
           _type_: "joined_date"
 
       update:
         _callback_: "update_clan_member_cb"
-        _incomplete_: true
         name:
-          _mandatory_: true
           _type_: "name"
         joined_date:
           _type_: "joined_date"
@@ -77,12 +72,10 @@ docks_clan_commands:
         
       delete:
         _callback_: "delete_clan_member_cb"
-        _incomplete_: true
         name:
           _type_: "name"
 
     db:
-      _incomplete_: true
       _desc_: "Database Configurations"
       new:
         _callback_: "new_db_cb"
@@ -108,17 +101,14 @@ docks_clan_commands:
       enable:
         _desc_: "Enable debug log to file"
         _type_: "bool"
-        _mandatory_: true
 
   _opers_:
     member:
-      _incomplete_: true
       _desc_: "clan member's info"
       _callback_: "show_clan_members_cb"
       name:
         _desc_: "Name of clan member"
         _type_: "string"
-        _mandatory_: true
       stat:
         _desc_: "Clan member's stat via Hiscore API"
     members:
@@ -134,7 +124,6 @@ docks_clan_commands:
         _desc_: "Last rank date"
         _type_: "date"
     db:
-      _incomplete_: true
       cache:
         _callback_: "show_db_cache_cb"
         _desc_: "List database cache"
