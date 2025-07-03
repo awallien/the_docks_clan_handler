@@ -122,11 +122,11 @@ class EnumType(NodeType):
     @classmethod
     def parse(cls, op: str, value: str, **kwargs) -> Union[Self, None]:
         cls._raise_unsupported_ops(op, ["=", "<", ">"])
-        rank_def: YamlEnumNode = kwargs.get("rank_def", None)
-        if rank_def is None:
-            raise ValueError(f"EnumNode({op}, {value}) requires 'rank_def' in kwargs for evaluation")
-        if not rank_def.contains_value(value):
-            raise ValueError(f"EnumNode({op}, {value}) '{value}' is not a valid enum value in {rank_def.name}")
+        alias: YamlEnumNode = kwargs.get("alias", None)
+        if alias is None:
+            raise ValueError(f"EnumNode({op}, {value}) requires 'alias' in kwargs for evaluation")
+        if not alias.contains_value(value):
+            raise ValueError(f"EnumNode({op}, {value}) '{value}' is not a valid enum value in {alias.name}")
         return cls(op, value)
 
 
@@ -173,8 +173,9 @@ class Node(ABC):
 
 
 class YamlLeafNode(Node):
-    def __init__(self, name, def_type, desc, fn_cb, node_type):
-        self.node_type: Type[NodeType] = node_type
+    def __init__(self, name, def_type, desc, fn_cb, node_type, alias):
+        self._node_type: Type[NodeType] = node_type
+        self._alias: Node = alias
         super().__init__(name, def_type, desc, fn_cb)
     
     @classmethod
@@ -191,7 +192,7 @@ class YamlLeafNode(Node):
                 if leaf_type is None:
                     raise TypeError(f"Leaf value does not exist for {leaf_name}")
                 
-                leaf_type = typedefs.get_type(leaf_type) or leaf_type
+                leaf_type, alias = typedefs.get_type(leaf_type) or (leaf_type, dict())
                 match leaf_type:
                     case "empty":
                         node_type = EmptyType
@@ -204,14 +205,15 @@ class YamlLeafNode(Node):
                     case "bool":
                         node_type = BoolType
                     case "enum":
-                        node_type = EnumType       
+                        node_type = EnumType
+                        alias["alias"] = typedefs.get_typedef(alias["alias"])      
                     case _:
                         raise TypeError(f"Type {leaf_type} is not found or supported")
 
-            return cls(leaf_name, leaf_type, desc_type, fn_cb, node_type)
+            return cls(leaf_name, leaf_type, desc_type, fn_cb, node_type, alias)
 
     def process(self, op, value) -> NodeType:
-        return self.node_type.parse(op, value)
+        return self._node_type.parse(op, value, **self._alias)
 
 
 class YamlEnumNode(Node):
@@ -248,15 +250,15 @@ class YamlEnumNode(Node):
 
 class YamlTypeDefs:
 
-    def __init__(self, type_defs, enums):
+    def __init__(self, type_defs, aliases):
         self._type_defs: Dict[str, str] = type_defs 
-        self._enums: Dict[str, YamlEnumNode] = enums
+        self._aliases: Dict[str, Node] = aliases
 
     @classmethod
     def parse_yaml(cls, data: dict) -> Self:
         """Parse _typedefs_ from the yaml including types: enum"""
         if data:
-            enums = dict()
+            aliases = dict()
             type_defs = dict()
             for name, values in data.items():
                 values_type = values.get("_type_", None)
@@ -268,31 +270,36 @@ class YamlTypeDefs:
                     raise TypeError(f"Duplicate name in type defs: {name}")
 
                 if values_type == "enum":
-                    enums[name] = YamlEnumNode.parse_yaml({name: values})
+                    aliases[name] = YamlEnumNode.parse_yaml({name: values})
                 elif not(values_type in base_types or values_type in type_defs):
                     raise TypeError(f"Invalid type in typedefs: {values_type}")
 
                 type_defs[name] = values_type
 
-            return cls(type_defs, enums)
+            return cls(type_defs, aliases)
         
     def contains(self, member: str) -> bool:
         return member in self._type_defs
+    
+    def get_typedef(self, member: str) -> Optional[Node]:
+        return self._aliases.get(member, None)
     
     def get_type(self, member: str) -> Union[str]:
         if member not in self._type_defs:
             return None
         
         def_type = self._type_defs.get(member, None)
+        sub_type = dict()
         seen = set()
         while def_type and def_type not in base_types and def_type not in seen:
             seen.add(def_type)
+            sub_type["alias"] = def_type
             def_type = self._type_defs.get(def_type, None)
         
         if not def_type:
             raise ValueError(f"Type definition for {member} is not found or invalid")
         
-        return def_type
+        return def_type, sub_type
 
 class YamlBlock:
 
@@ -301,14 +308,12 @@ class YamlBlock:
         name,
         desc,
         sub_blocks,
-        validate_fn=None,
         cb_fn=None,
     ):
         self._name: str = name
         self._desc: str = desc
         self._sub_blocks: Dict[str, Union[YamlBlock, YamlLeafNode]] = sub_blocks
         self._cb_fn: Optional[Callable] = cb_fn
-        self._validate_fn: Optional[Callable] = validate_fn
 
     @classmethod
     def parse_yaml(
@@ -329,9 +334,6 @@ class YamlBlock:
                 match values_name:
                     case "_desc_":
                         desc = values_value
-                    case "_validate_":
-                        assert values_value in mapper_cb
-                        validate = mapper_cb[values_value]
                     case "_callback_":
                         assert values_value in mapper_cb
                         cb_fn = mapper_cb[values_value]
@@ -339,7 +341,7 @@ class YamlBlock:
                         blocks[values_name] = YamlLeafNode.parse_yaml({values_name:values_value}, typedefs)
                     case _:
                         blocks[values_name] = YamlBlock.parse_yaml({values_name:values_value}, typedefs, mapper_cb)
-            return cls(block_name, desc, blocks, validate, cb_fn)
+            return cls(block_name, desc, blocks, cb_fn)
             
     def process(self, cmd_lst: List[str]) -> bool:
         """
@@ -373,16 +375,13 @@ class YamlBlock:
             else:
                 raise NotImplementedError(f"Block type {type(block)} is not supported in block {self._name}")
 
-        if not leafs and not result:
-            raise ValueError(f"{self._name} is incomplete, no arguments found")
-        
-        if self._validate_fn and not self._validate_fn(**leafs):
-            raise ValueError(f"Validation failed in block {block_name}")
+        if not result:
+            raise ValueError(f"{self._name} returns None/False")
 
-        if self._cb_fn:
-            return self._cb_fn(**leafs)
+        if self._cb_fn and not self._cb_fn(**leafs):
+            raise SystemError(f"Callback function failed in block {block_name}")
 
-        return True
+        return result
 
 class YamlConfigs:
 

@@ -1,14 +1,14 @@
 from datetime import datetime
 from enum import Enum, verify, UNIQUE
-from typing import Optional, List, Tuple
+from typing import Optional, List
 
-from dao import IDao
+from dao import IDao, IColumns
 from db import DatabaseColumn, DatabaseRow, DataFrameDatabase, DataFrameDatabaseDirCache
 from entity import ClanMember, ClanMemberRankEnum
 
 
 @verify(UNIQUE)
-class ClanMemberFieldsEnum(Enum):
+class ClanMemberFieldsEnum(Enum, IColumns):
     MEMBER = DatabaseColumn("Member", "N/A", "string")
     JOIN_DATE = DatabaseColumn("Join_Date", datetime.min, "datetime64[ns]")
     RANK = DatabaseColumn("Rank", ClanMemberRankEnum.RANK_INVALID.value, "category", categories=ClanMemberRankEnum.values())
@@ -22,16 +22,34 @@ class ClanMemberFieldsEnum(Enum):
     @classmethod
     def values(cls):
         return [field.value for field in cls]
+    
+    @classmethod
+    def primary(cls):
+        return (cls.MEMBER.value,)
+    
+    @staticmethod
+    def primary_sort(col):
+        return col.str.lower()
 
 
 class ClanMemberDFDAO(IDao):
     """Clan Member DAO Impl for DataFrame Database"""
 
     def __init__(self):
-        self._df_db = DataFrameDatabase(prim_cols=(ClanMemberFieldsEnum.MEMBER.value,), 
-                                        cols=ClanMemberFieldsEnum.values(),
-                                        prim_cols_sort_fn=lambda col: col.str.lower())
-        self._db_cache = DataFrameDatabaseDirCache()
+        self._cols = ClanMemberFieldsEnum.values()
+        self._prim_cols = ClanMemberFieldsEnum.primary()
+        self._prim_sort_fn = ClanMemberFieldsEnum.primary_sort
+        self._df_db = self.__init_db()
+
+    def __init_db(self) -> None:
+        self._df_db = DataFrameDatabase(prim_cols=self._prim_cols, 
+                                        cols=self._cols,
+                                        prim_cols_sort_fn=self._prim_sort_fn)
+
+    @property
+    def db(self) -> DataFrameDatabase:
+        """Get DataFrame Database instance"""
+        return self._df_db
 
     def add(self, obj: ClanMember) -> bool:
         """Add new clan member to DF Database"""
@@ -103,15 +121,3 @@ class ClanMemberDFDAO(IDao):
         
         rows_dict = self._df_db.dump(filter_expr)
         return [convert_dict_to_ClanMember(row) for row in rows_dict]
-    
-    def save_db(self, fname=''):
-        self._df_db.save_to_cache(fname)
-
-    def load_db(self, fname='', cache_f_idx=-1) -> bool:
-        return self._df_db.load_from_cache(fname, cache_f_idx)
-    
-    def db_is_loaded(self, name=None, index=None):
-        return self._df_db.db_is_loaded(name, index)
-    
-    def cache_db_list(self) -> List[Tuple[int, str, str]]:
-        return self._db_cache.cache_list()

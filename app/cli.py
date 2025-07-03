@@ -2,13 +2,13 @@ import shlex
 from mgmt import YamlCommandParser
 
 
-class DocksClanScriptRunner:
+class DocksClanCLI:
 
     def __init__(self, banner="Docks Clan Script Runner v2", prompt_chr=">"):
         self._banner = banner
         self._prompt_quit = False
         self._prompt_chr = prompt_chr
-        self._parser = YamlCommandParser().init_yaml_commands("docks_clan_commands")
+        self._parser = YamlCommandParser().parse("docks_clan_commands")
 
     def run(self):
         print(self.banner)
@@ -20,6 +20,11 @@ class DocksClanScriptRunner:
 
             fields = shlex.split(resp)
             match fields[0]:
+                case "load":
+                    if len(fields) < 2:
+                        print("Please provide a valid command list")
+                        continue
+                    self._parser.parse(fields[1])
                 case "quit"|"exit":
                     self._prompt_quit = True
                 case _:

@@ -1,1 +1,1 @@
-from .docks_clan_script import DocksClanScriptRunner
+from .cli import DocksClanCLI

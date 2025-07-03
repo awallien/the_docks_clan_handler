@@ -51,7 +51,6 @@ docks_clan_commands:
   _configs_:
     member:
       _desc_: "Member configurations"
-      _validate_: "db_is_loaded"
       add:
         _callback_: "add_clan_member_cb"
         name:
@@ -80,15 +79,25 @@ docks_clan_commands:
       new:
         _callback_: "new_db_cb"
         _desc_: "Create new database"
-        _type_: "string"
+        _type_: "empty"
       save:
         _callback_: "save_db_cb"
         _desc_: "Save current working database to cache"
-        _type_: "empty"
+        name:
+          _desc_: "database name"
+          _type_: "string"
       load:
         _callback_: "load_db_cb"
-        _validate_: "db_load_is_valid"
         _desc_: "Load database from cache"
+        name:
+          _desc_: "database cache name"
+          _type_: "string"
+        index:
+          _desc_: "index of database cache"
+          _type_: "uint"
+      delete:
+        _callback_: "delete_db_cb"
+        _desc_: "Delete database cache"
         name:
           _desc_: "database cache name"
           _type_: "string"
