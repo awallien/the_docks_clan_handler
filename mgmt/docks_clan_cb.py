@@ -3,7 +3,7 @@ from datetime import datetime
 from service import ClanMemberService
 
 from db import DataFrameDatabaseDirCache, DataFrameDatabase
-from dao import ClanMemberFieldsEnum
+from dao import ClanMemberFields
 from .mgmt_abc import ICallbackMapper
 from .mgmt_util import convert_to_datetime
 
@@ -53,7 +53,7 @@ class _DocksClanCommandsCallback(ICallbackMapper):
         if not (fname or cache_f_idx >= 0):
             return False
         
-        cols = ClanMemberFieldsEnum
+        cols = ClanMemberFields
         self._current_db = self.cache.load(cols, fname=fname, cache_f_idx=cache_f_idx)
         
         return self._current_db is not None
