@@ -6,7 +6,7 @@ from logging.handlers import RotatingFileHandler
 
 class Logger:
     def __init__(self, log_file='app.log'):
-        if getattr(self.__class__, '_has_instance', False):
+        if hasattr(self.__class__, '_has_instance'):
             raise RuntimeError('Cannot create another instance')
         self.__class__._has_instance = True
         self.enable = False

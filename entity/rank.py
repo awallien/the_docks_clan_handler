@@ -1,5 +1,3 @@
-
-
 from enum import UNIQUE, StrEnum, verify
 from typing import List, Self
 
@@ -38,29 +36,20 @@ class ClanMemberRankEnum(StrEnum):
 
     @classmethod
     def activeness_ranks(cls) -> List[Self]:
-        return cls.members[1:5]
+        return cls.members()[1:5]
     
     @classmethod
     def achievement_ranks(cls) -> List[Self]:
-        return cls.members[5:16]
+        return cls.members()[5:16]
     
     @classmethod
     def honorable_ranks_non_challenged(cls) -> List[Self]:
-        return cls.members[16:21]
+        return cls.members()[16:21]
     
     @classmethod
     def honorable_ranks_challenged(cls) -> List[Self]:
-        return cls.members[22:25]
+        return cls.members()[22:25]
     
     @classmethod
     def administrative_ranks(cls) -> List[Self]:
-        return cls.members[26:29]
-
-    # @classmethod
-    # def get_next_rank(cls, current_rank: Self) -> Self:
-    #     ranks = list(cls)
-    #     ranks_len = len(ranks)
-    #     for ix, rank in enumerate(ranks):
-    #         if rank.value == current_rank.value:
-    #             return ranks[min(ranks_len-1, ix+1)]
-    #     assert ValueError(f"Unable to retrieve next rank from current rank {str(current_rank)}")
+        return cls.members()[26:29]
