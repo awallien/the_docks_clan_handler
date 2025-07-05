@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Tuple, Union
-from db import DataFrameDatabase
-from dao import IDatabaseColumns
+from .icolumns import IDatabaseColumns
+from .df_db import DataFrameDatabase
 import pandas as pd
 import pathlib
 import os

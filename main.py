@@ -2,6 +2,7 @@ import asyncio
 import argparse
 
 from app import DocksClanCLI
+from util import generate_hiscore_mdata_files
 
 
 class DocksClanApp:
@@ -60,16 +61,27 @@ if __name__ == "__main__":
     if args.bot:
         flags.append("bot")
 
-    bot_mode = None
+    bot_mode = ""
     if args.bot:
-        if args.dev:
-            bot_mode = "development"
+        if args.dev and args.prod:
+            parser.error("Cannot specify both --dev and --prod for bot mode.")
+            exit(1)
         elif args.prod:
-            bot_mode = "production"
+            bot_mode = "p"
+        elif args.dev:
+            bot_mode = "d"
+        else:
+            print("No bot mode specified, defaulting to 'development' mode.")
+            bot_mode = "d"
 
     kwargs = dict()
     if bot_mode:
         kwargs["bot_mode"] = bot_mode
     kwargs["debug"] = args.debug
 
-    asyncio.run(DocksClanApp().run(flags, **kwargs))
+    generate_hiscore_mdata_files()  # Generate OSRS Hiscore metadata files
+
+    try:
+        asyncio.run(DocksClanApp().run(flags, **kwargs))
+    except KeyboardInterrupt or asyncio.exceptions.CancelledError:
+        print("\nExiting Docks Clan App...")

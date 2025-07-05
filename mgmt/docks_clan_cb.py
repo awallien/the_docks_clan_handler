@@ -57,6 +57,13 @@ class _DocksClanCommandsCallback(ICallbackMapper):
         self._current_db = self.cache.load(cols, fname=fname, cache_f_idx=cache_f_idx)
         
         return self._current_db is not None
+    
+    def delete_database(self, fname: str = None, cache_f_idx: int = -1) -> bool:
+        """Delete database from cache"""
+        if not (fname or cache_f_idx >= 0):
+            return False
+        
+        return self.cache.delete(fname=fname, f_idx=cache_f_idx)
 
     def db_is_loaded(self) -> bool:
         return self._current_db is not None
@@ -116,6 +123,13 @@ def load_db_cb(**kwargs):
         return False
     return docks_clan_cb.load_database(fname=fname, cache_f_idx=cache_f_idx)
 
+def delete_db_cb(**kwargs) -> bool:
+    fname = kwargs.get('name', None)
+    cache_f_idx = kwargs.get('cache_f_idx', -1)
+    if not (fname or cache_f_idx >= 0):
+        return False
+    return docks_clan_cb.delete_database(fname=fname, f_idx=cache_f_idx)
+
 def show_clan_members_cb(**kwargs):
     if 'name' in kwargs:
         members = docks_clan_cb.clan_member_service.get_member(kwargs['name'])
@@ -153,6 +167,7 @@ _internal_mapper_fns = [
     delete_clan_member_cb,
     save_db_cb,
     load_db_cb,
+    delete_db_cb,
     debug_cb,
     show_clan_members_cb,
     show_db_cache_cb,

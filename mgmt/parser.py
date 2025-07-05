@@ -335,7 +335,7 @@ class YamlBlock:
                     case "_desc_":
                         desc = values_value
                     case "_callback_":
-                        assert values_value in mapper_cb
+                        assert values_value in mapper_cb, f"Cannot find callback {values_value} in mapper"
                         cb_fn = mapper_cb[values_value]
                     case _ if "_type_" in values_value:
                         blocks[values_name] = YamlLeafNode.parse_yaml({values_name:values_value}, typedefs)

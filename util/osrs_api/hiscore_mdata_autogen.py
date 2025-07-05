@@ -1,5 +1,6 @@
 import pathlib
 import re
+import os
 
 
 header = \
@@ -139,6 +140,9 @@ generated_file_names = {
             "vars":["name", "level", "rank", "xp"],
             "setters": [False, True, True, True],
             "init_call_fn": lambda name : f"Skill(\"{name}\", 1, -1, -1)"
+        },
+        "mdata_init_py": {
+            "import": "Skills, Skill, SKILLS"
         }
     },
     "activities": {
@@ -148,6 +152,9 @@ generated_file_names = {
             "vars": ["name", "score", "rank"],
             "setters": [False, True, True],
             "init_call_fn": lambda name : f"Activity(\"{name}\", -1, -1)"
+        },
+        "mdata_init_py": {
+            "import": "Activities, Activity, ACTIVITIES"
         }
     },
     "bosses": {
@@ -157,37 +164,59 @@ generated_file_names = {
             "vars": ["name", "score", "rank"],
             "setters": [False, True, True],
             "init_call_fn": lambda name : f"Boss(\"{name}\", -1, -1)"
+        },
+        "mdata_init_py": {
+            "import": "Bosses, Boss, BOSSES"
         }
     }
 }
 
+def generate_hiscore_mdata_files():
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(current_dir, "__init__.py"), "r") as init_fp_1:
+        init_contents = init_fp_1.read()
+        for name in generated_file_names:
+            vals = generated_file_names[name]
+            mdata_list = vals["mdata_list"]
+
+            mdata_base_cls = vals["mdata_base_cls"]
+            mdata_base_name = mdata_base_cls["mdata_base_name"]
+            mdata_base_vars = mdata_base_cls["vars"]
+            mdata_base_setters = mdata_base_cls["setters"]
+            mdata_init_vars_fn = mdata_base_cls["init_call_fn"]
+
+            mdata_init_py = vals["mdata_init_py"]
+            mdata_init_import = mdata_init_py["import"]
+
+            assert len(mdata_base_vars) == len(mdata_base_setters)
+
+            pyfile = os.path.join(current_dir, f"{name}.py")
+            with open(pyfile, "w") as pyf:
+                # Base class
+                base_getters = [make_getter(mdata) for mdata in mdata_base_vars]
+                base_setters = [make_setter(var) for var,setter in zip(mdata_base_vars, mdata_base_setters) if setter]
+
+                # Base Collection class
+                coll_vars = [convert_to_var_name(v) for v in mdata_list]
+                coll_vars_vals = [mdata_init_vars_fn(v) for v in mdata_list]
+                coll_getters = [make_getter(v) for v in coll_vars]
+                get_fn = make_get_function(name.upper())
+
+                # Bring it all together into one file
+                pyf.write(header)
+                pyf.write(make_class(mdata_base_name, mdata_base_vars, mdata_base_vars, base_getters, base_setters, set_init_params=True))
+                pyf.write(generate_mdata_list(name.upper(), mdata_list))
+                pyf.write(make_class(name.capitalize(), coll_vars, coll_vars_vals, coll_getters,coll_get_fn=get_fn))
+
+            if mdata_init_import not in init_contents:
+                with open(os.path.join(current_dir, "__init__.py"), "a") as init_fp_2:
+                    if not init_contents[-1] == "\n":
+                        init_fp_2.write("\n")
+                        init_contents += "\n"
+                    new_import = f"from .{name} import {mdata_init_import}\n"
+                    init_fp_2.write(new_import)
+                    init_contents += new_import
+
 if __name__ == "__main__":
-    for name in generated_file_names:
-        vals = generated_file_names[name]
-        mdata_list = vals["mdata_list"]
-
-        mdata_base_cls = vals["mdata_base_cls"]
-        mdata_base_name = mdata_base_cls["mdata_base_name"]
-        mdata_base_vars = mdata_base_cls["vars"]
-        mdata_base_setters = mdata_base_cls["setters"]
-        mdata_init_vars_fn = mdata_base_cls["init_call_fn"]
-
-        assert len(mdata_base_vars) == len(mdata_base_setters)
-
-        pyfile = str(pathlib.Path(__file__).parent.absolute()) + f"/{name}.py"
-        with open(pyfile, "w") as pyf:
-            # Base class
-            base_getters = [make_getter(mdata) for mdata in mdata_base_vars]
-            base_setters = [make_setter(var) for var,setter in zip(mdata_base_vars, mdata_base_setters) if setter]
-
-            # Base Collection class
-            coll_vars = [convert_to_var_name(v) for v in mdata_list]
-            coll_vars_vals = [mdata_init_vars_fn(v) for v in mdata_list]
-            coll_getters = [make_getter(v) for v in coll_vars]
-            get_fn = make_get_function(name.upper())
-
-            # Bring it all together into one file
-            pyf.write(header)
-            pyf.write(make_class(mdata_base_name, mdata_base_vars, mdata_base_vars, base_getters, base_setters, set_init_params=True))
-            pyf.write(generate_mdata_list(name.upper(), mdata_list))
-            pyf.write(make_class(name.capitalize(), coll_vars, coll_vars_vals, coll_getters,coll_get_fn=get_fn))
+    generate_hiscore_mdata_files()
+    print("OSRS Hiscore metadata files generated successfully.")
