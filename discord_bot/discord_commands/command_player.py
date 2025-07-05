@@ -2,7 +2,7 @@ from pandas import isna
 from db.clan_database import ClanDatabase
 from discord import Color, Embed, app_commands
 
-from util import debug_print, PlayerRankHandler, sanitize_player_rank
+from util import logger, PlayerRankHandler, sanitize_player_rank
 from discord_bot.discord_bot_util import err_embed, get_rank_icon_url, request_submitted_embed
 
 OPTIONS = ["add", "delete", "detail", "request_name_change", "request_rank_challenge"]
@@ -29,7 +29,7 @@ async def cb_player(BOT, ctx, player_name, option=None, name_change=None):
     elif option == "request_name_change":
         req_name_change = True
 
-    debug_print(f"option: add({is_add}) delete({is_deleted}) detail({is_detailed}) request_name_change({req_name_change}))")
+    logger.debug(f"option: add({is_add}) delete({is_deleted}) detail({is_detailed}) request_name_change({req_name_change}))")
 
     msg = ""
     player_info = BOT.db.get_player_data(player_name)

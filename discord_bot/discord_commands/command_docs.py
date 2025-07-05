@@ -1,6 +1,6 @@
 from discord import utils as dutils
 from discord_bot.discord_bot_util import err_embed, info_embed
-from util import err_print
+from util import logger
 
 
 DOCS = [
@@ -20,7 +20,7 @@ async def cb_docs(BOT, ctx):
             thr = dutils.get(BOT.forum_channel.threads, name=doc)
             docs_msg += f"**{doc}**: {thr.mention}\n"
         except:
-            err_print(f"{doc} does not exist")
+            logger.err(f"{doc} does not exist")
     
     if not docs_msg:
         docs_msg = "There seems to be no docs here..."

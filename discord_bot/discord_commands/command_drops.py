@@ -1,4 +1,4 @@
-from util import debug_print
+from util import logger
 from datetime import datetime, timedelta, timezone
 import re
 from discord import Color, Embed, app_commands
@@ -53,14 +53,14 @@ async def cb_drops(BOT, ctx, days=30, player=None):
     async for message in BOT.drop_channel.history(after=dtime_days, oldest_first=False, limit=None):
         if message.author.name == BOT.drop_webhook:
             if message.embeds:
-                debug_print(f"message {message_cnt}")
+                logger.debug(f"message {message_cnt}")
                 message_cnt += 1
                 for embed in message.embeds:
                     info = get_drop_embed_info(embed)
                     if info is None or (player and player != info.player):
                         break
                     
-                    debug_print(f"{info.player}, {info.quantity}, {info.item}, {info.value}")
+                    logger.debug(f"{info.player}, {info.quantity}, {info.item}, {info.value}")
                     
                     player_drops_info = players_drops.get(info.player, None)
                     if player_drops_info is None:

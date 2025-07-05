@@ -5,7 +5,7 @@ from io import BytesIO
 from PIL import Image, ImageDraw
 from discord import Embed, File
 from discord_bot.discord_bot_util import err_embed
-from util import RESPONSE_ERR, RESPONSE_OK, debug_print
+from util import logger, RESPONSE_ERR, RESPONSE_OK
 from resources import CHAT_BG, OSRS_FONT
 
 RANDOM_WEIGHTS_OPTIONS = ['True']
@@ -102,7 +102,7 @@ def get_rng_option(options, weights, opts_len):
     rng = rand.random()
     total = 0
 
-    debug_print(f"RNG: {rng}")
+    logger.debug(f"RNG: {rng}")
 
     for idx in range(opts_len):
         option = options[idx]
@@ -138,7 +138,7 @@ async def process_spin_images(ctx, options, weights, opts_len, show_options_deta
         message = await ctx.send(embed=gif_embed, file=File(gif_bytes, filename=gif_file))
         
     await asyncio.sleep(3)
-    debug_print(rng_option)
+    logger.debug(rng_option)
 
     with BytesIO() as winner_bytes:
         chosen_option_frame.save(winner_bytes, format="PNG")

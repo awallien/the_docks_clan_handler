@@ -5,7 +5,7 @@ from discord import ClientException, Intents, utils as dutils, app_commands
 from discord.ext import commands
 from db import ClanDatabase
 from discord_bot import *
-from util import debug_print, debug_set_enable
+from util import logger
 
 class TheDocksDiscordBot(commands.Bot):
     TOKEN = os.getenv("DISCORD_TOKEN")
@@ -41,15 +41,15 @@ class TheDocksDiscordBot(commands.Bot):
         self.voice_channel = __discord_get_or_fail(self.guild.voice_channels, self.voice_channel)
         self.allowed_role = __discord_get_or_fail(self.guild.roles, self.allowed_role)
 
-        debug_print(f"guild({self.guild}), drop_channel({self.drop_channel}), general_channel({self.general_channel}), mod({self.mod}))")
+        logger.debug(f"guild({self.guild}), drop_channel({self.drop_channel}), general_channel({self.general_channel}), mod({self.mod}))")
 
     async def on_ready(self):
-        debug_print(f"{self.user} has connected to Discord!")
+        logger.debug(f"{self.user} has connected to Discord!")
         
         self.__init_discord_vars()
         
         if self.guild and self.mod:
-            debug_print(f"'{self.user}' is connected to Guild(id:{self.guild.id})")
+            logger.debug(f"'{self.user}' is connected to Guild(id:{self.guild.id})")
         else:
             self.close()
             if not self.guild:
@@ -58,7 +58,7 @@ class TheDocksDiscordBot(commands.Bot):
                 raise ClientException(f"Bot owner {self.mod} is not found!")
 
     async def on_command_error(self, ctx, exception):
-        debug_print(f"Exception({ctx.author.name},{type(exception)}:{exception})")
+        logger.debug(f"Exception({ctx.author.name},{type(exception)}:{exception})")
         if type(exception) == commands.CheckFailure:
             message = await ctx.reply(embed=err_embed(f"Sorry, you must be a {BOT.allowed_role} in order to use my commands. " 
                                                       f"If you are a {BOT.allowed_role}, reach out to {BOT.mod.global_name} to provide you the role.",
@@ -151,8 +151,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    debug_set_enable(args.d)
-    debug_print("Debug print is ON")
+    logger.enable_debug(args.d)
+    logger.debug("Debug print is ON")
 
     db = ClanDatabase(mode_chr="r")
     BOT.run(db, args.production)

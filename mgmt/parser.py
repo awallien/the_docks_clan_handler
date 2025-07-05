@@ -11,6 +11,7 @@ from datetime import datetime
 from .docks_clan_cb import docks_clan_cb
 from .mgmt_abc import ICallbackMapper
 
+def TAB(n): return "  "*n
 
 yaml_cb_fns_mapper: Dict[str, ICallbackMapper] = {
     "docks_clan_commands": docks_clan_cb
@@ -186,7 +187,7 @@ class YamlLeafNode(Node):
                 raise TypeError(f"Data received more than one leaf value: {data}")
             for leaf_name, leaf_values in data.items():
                 leaf_type = leaf_values.get("_type_", None)
-                desc_type = leaf_values.get("_desc_", "")
+                desc_type = leaf_values.get("_desc_", "N/A")
                 fn_cb = leaf_values.get("_callback_", None)
 
                 if leaf_type is None:
@@ -326,7 +327,6 @@ class YamlBlock:
         if data:
             blocks = dict()
             desc = ""
-            validate = None
             cb_fn = None
             block_name = list(data.keys())[0]
             block_values = data[block_name]
@@ -342,7 +342,13 @@ class YamlBlock:
                     case _:
                         blocks[values_name] = YamlBlock.parse_yaml({values_name:values_value}, typedefs, mapper_cb)
             return cls(block_name, desc, blocks, cb_fn)
-            
+
+    def get_cmds(self) -> str:
+        max_len = max((len(name) for name in self._sub_blocks), default=0)
+        return "\n".join(
+            f"{TAB(1)}{name.ljust(max_len)} - {block._desc}" for name, block in self._sub_blocks.items()
+        )
+    
     def process(self, cmd_lst: List[str]) -> bool:
         """
         1. Find the sub block by name
@@ -355,6 +361,9 @@ class YamlBlock:
 
         while cmd_lst:
             cmd = cmd_lst.pop(0)
+            if cmd == "?":
+                return self.get_cmds()
+            
             args = re.split(r'(=|<|>)', cmd, maxsplit=1)
 
             block_name, op, value = '', '', ''
@@ -403,10 +412,23 @@ class YamlConfigs:
             blocks[name] = YamlBlock.parse_yaml({name: values}, type_defs, mapper_cb)
         return cls(blocks)
 
+    def get_cmds(self):
+        max_len = max((len(name) for name in self._blocks), default=0)
+        return "\n".join(
+            f"{TAB(1)}{name.ljust(max_len)} - {block._desc}" for name, block in self._blocks.items()
+        )
+
     def process(self, cmd_list: List[str]) -> bool:
-        if (not cmd_list) or ((block := self._blocks.get(cmd_list[0], None)) is None):
+        if not cmd_list:
             return False
-        return block.process(cmd_list[1:])
+        
+        match cmd_list[0]:
+            case "?":
+                return self.get_cmds()
+            case _ if (block := self._blocks.get(cmd_list[0], None)):
+                return block.process(cmd_list[1:])
+            case _:
+                return False
 
 
 class YamlOpers:
@@ -428,11 +450,24 @@ class YamlOpers:
                 raise TypeError(f"Duplicate oper command found: {name}")
             blocks[name] = YamlBlock.parse_yaml({name: values}, type_defs, mapper_cb)
         return cls(blocks)
+    
+    def get_cmds(self):
+        max_len = max((len(name) for name in self._blocks), default=0)
+        return "\n".join(
+            f"{TAB(1)}{name.ljust(max_len)} - {block._desc}" for name, block in self._blocks.items()
+        )
             
     def process(self, cmd_list: List[str]) -> bool:
-        if (not cmd_list) or (block := self._blocks.get(cmd_list[0], None)) is None:
+        if not cmd_list:
             return False
-        return block.process(cmd_list[1:])
+        
+        match cmd_list[0]:
+            case "?":
+                return self.get_cmds()
+            case _ if (block := self._blocks.get(cmd_list[0], None)):
+                return block.process(cmd_list[1:])
+            case _:
+                return False
 
 
 class YamlRootNode:
@@ -442,6 +477,16 @@ class YamlRootNode:
         self._cb_fns: dict = cb_fns
         self._configs: YamlConfigs = configs
         self._opers: YamlOpers = opers
+
+    @property
+    def name(self) -> str:
+        return self._name
+    
+    def get_cmds(self):
+        return (
+            f"{TAB(1)}config         - Execute config commands\n"
+            f"{TAB(1)}show           - Execute oper commands\n"
+        )
     
     def process(self, cmd_list: List[str]) -> bool:
         """
@@ -455,18 +500,21 @@ class YamlRootNode:
         match cmd_list[0].lower():
             case "show":
                 return self._opers.process(cmd_list[1:])
-            case _:
+            case "config":
                 #TODO: parse "no" and pass into configs
-                return self._configs.process(cmd_list)
+                return self._configs.process(cmd_list[1:])
+            case _:
+                return ""
 
 class YamlCommandParser:
+    _yaml_dir: str = os.path.join(str(pathlib.Path(__file__).parent.absolute()),"yaml")
 
     def __init__(self):
-        self._yaml_dir: str = os.path.join(str(pathlib.Path(__file__).parent.absolute()),"yaml")
         self._yaml_tree : YamlRootNode = None
 
     def parse(self, root_name: str) -> Self:
-        with open(os.path.join(self._yaml_dir, f"{root_name}.yaml")) as fp:
+        yaml_file = f"{root_name}.yaml"
+        with open(os.path.join(self._yaml_dir, yaml_file)) as fp:
             yaml_data = yaml.safe_load(fp.read())
             assert yaml_data is not None, f"{root_name} yaml file is invalid"
             self._parse_tag_section(yaml_data)
@@ -477,6 +525,23 @@ class YamlCommandParser:
         if self._yaml_tree is None:
             return False
         return self._yaml_tree.process(cmd_list)
+    
+    @classmethod
+    def yaml_file_exists(cls, cmd_file):
+        return os.path.exists(os.path.join(cls._yaml_dir, cmd_file + ".yaml"))
+    
+    @classmethod
+    def get_yaml_files(cls):
+        return [
+            os.path.splitext(f)[0]
+            for f in os.listdir(cls._yaml_dir)
+            if os.path.isfile(os.path.join(cls._yaml_dir, f)) and f not in ('.', '..')
+        ]
+    
+    def get_cmds(self):
+        if self._yaml_tree is None:
+            return ""
+        return f"[{self._yaml_tree.name}]\n" + self._yaml_tree.get_cmds()
         
     def _parse_tag_section(self, yaml_data: dict):
         """Parse root sections - _typedefs_, _groupings_, _configs_, _opers_"""

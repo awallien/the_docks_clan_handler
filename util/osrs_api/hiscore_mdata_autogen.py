@@ -210,10 +210,10 @@ def generate_hiscore_mdata_files():
 
             if mdata_init_import not in init_contents:
                 with open(os.path.join(current_dir, "__init__.py"), "a") as init_fp_2:
+                    new_import = ""
                     if not init_contents[-1] == "\n":
-                        init_fp_2.write("\n")
-                        init_contents += "\n"
-                    new_import = f"from .{name} import {mdata_init_import}\n"
+                        new_import = "\n"
+                    new_import += f"from .{name} import {mdata_init_import}\n"
                     init_fp_2.write(new_import)
                     init_contents += new_import
 

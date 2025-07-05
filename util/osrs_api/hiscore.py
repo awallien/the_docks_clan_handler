@@ -1,13 +1,11 @@
+import sys
 import requests
 from enum import Enum, verify, UNIQUE
 from http import HTTPStatus
 
-if __name__ == "__main__":
-    from skills import *
-    from activities import *
-    from bosses import *
-else:
-    from util.osrs_api import *
+from .skills import *
+from .activities import *
+from .bosses import *
 
 HISCORE_API_URL_FMT = "https://secure.runescape.com/m=hiscore_oldschool%s/index_lite.ws?player=%s"
 
@@ -34,9 +32,7 @@ class Hiscore:
         self._bosses = Bosses()
         self._skills = Skills()
 
-        self._url = None
         self.__set_url()
-
         self.__fetch_user_data()
 
     def __set_url(self):
@@ -63,6 +59,9 @@ class Hiscore:
             boss_cls = self.bosses.get(boss)
             boss_cls.rank, boss_cls.score = map(int, content_fields[idx].split(","))
             idx += 1
+
+        if not idx == len(content_fields):
+            print(f"Only parsed {idx}/{len(content_fields)} of user hiscore data. Please check for any errors or API modifications on runescape wiki.", file=sys.stderr)
 
     def __fetch_user_data(self):
         response = requests.get(url=self._url)

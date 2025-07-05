@@ -4,3 +4,4 @@ __pycache__
 activities.py
 skills.py
 bosses.py
+logs/

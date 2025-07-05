@@ -4,8 +4,33 @@ from service import ClanMemberService
 
 from db import DataFrameDatabaseDirCache, DataFrameDatabase
 from dao import ClanMemberFields
+from util import set_logger_level
 from .mgmt_abc import ICallbackMapper
 from .mgmt_util import convert_to_datetime
+import threading
+import functools
+
+_lock = threading.Lock()
+_current_lock_holder = {"name": ""}
+
+def db_lock(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        func_name = func.__name__
+        while True:
+            with _lock:
+                if _current_lock_holder["name"] == "" or _current_lock_holder["name"] == func_name:
+                    _current_lock_holder["name"] = func_name
+                    break
+            # Wait and retry
+            threading.Event().wait(0.01)
+        try:
+            return func(*args, **kwargs)
+        finally:
+            with _lock:
+                _current_lock_holder["name"] = ""
+    return wrapper
+
 
 class _DocksClanCommandsCallback(ICallbackMapper):
 
@@ -60,7 +85,7 @@ class _DocksClanCommandsCallback(ICallbackMapper):
     
     def delete_database(self, fname: str = None, cache_f_idx: int = -1) -> bool:
         """Delete database from cache"""
-        if not (fname or cache_f_idx >= 0):
+        if not (fname or cache_f_idx >= 0) or not self.db_is_loaded():
             return False
         
         return self.cache.delete(fname=fname, f_idx=cache_f_idx)
@@ -71,11 +96,18 @@ class _DocksClanCommandsCallback(ICallbackMapper):
 
 docks_clan_cb = _DocksClanCommandsCallback()
 
+# Wrapper for functions to check if a db is loaded for certain callbacks
+def db_is_loaded(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if not docks_clan_cb.db_is_loaded():
+            return False
+        return func(*args, **kwargs)
+    return wrapper
 
-def db_is_loaded(**kwargs) -> bool:
-    return docks_clan_cb.db_is_loaded()
 
-
+@db_is_loaded
+@db_lock
 def add_clan_member_cb(**kwargs) -> bool:
     name = kwargs.get('name', None)
     joined_date = kwargs.get('joined_date', None)
@@ -85,7 +117,8 @@ def add_clan_member_cb(**kwargs) -> bool:
 
     return docks_clan_cb.clan_member_service.add_member(name, joined_date)
 
-
+@db_is_loaded
+@db_lock
 def update_clan_member_cb(**kwargs) -> bool:
     if not (name := kwargs.get('name', None)):
         return False
@@ -100,22 +133,26 @@ def update_clan_member_cb(**kwargs) -> bool:
     )
     return True
 
-
+@db_is_loaded
+@db_lock
 def delete_clan_member_cb(**kwargs) -> bool:
     if not (name := kwargs.get('name', None)):
         return False
     return docks_clan_cb.clan_member_service.delete_member(kwargs['name'])
 
-
+@db_lock
 def new_db_cb(**kwargs) -> bool:
     return docks_clan_cb.new_database()
 
+@db_is_loaded
+@db_lock
 def save_db_cb(**kwargs):
     fname = kwargs.get('name', None)
     if not fname:
         return False
     return docks_clan_cb.save_database(fname)
 
+@db_lock
 def load_db_cb(**kwargs):
     fname = kwargs.get('name', None)
     cache_f_idx = kwargs.get('cache_f_idx', -1)
@@ -123,6 +160,8 @@ def load_db_cb(**kwargs):
         return False
     return docks_clan_cb.load_database(fname=fname, cache_f_idx=cache_f_idx)
 
+@db_is_loaded
+@db_lock
 def delete_db_cb(**kwargs) -> bool:
     fname = kwargs.get('name', None)
     cache_f_idx = kwargs.get('cache_f_idx', -1)
@@ -130,6 +169,8 @@ def delete_db_cb(**kwargs) -> bool:
         return False
     return docks_clan_cb.delete_database(fname=fname, f_idx=cache_f_idx)
 
+@db_is_loaded
+@db_lock
 def show_clan_members_cb(**kwargs):
     if 'name' in kwargs:
         members = docks_clan_cb.clan_member_service.get_member(kwargs['name'])
@@ -149,19 +190,21 @@ def show_clan_members_cb(**kwargs):
     for member in members:
         print(f"{member.member}, {member.joined_date}, {member.rank}")
 
-
+@db_lock
 def show_db_cache_cb(_) -> None:
     db_cache_list = docks_clan_cb.cache.cache_list()
     print(db_cache_list)
 
-
 def debug_cb(**kwargs):
-    pass
+    if not (level := kwargs.get("level", None)):
+        return False
+    
+    name = kwargs.get("name", "")
+    return set_logger_level(level, name)
 
 
 """ Register Commands """
 _internal_mapper_fns = [
-    db_is_loaded,
     add_clan_member_cb,
     update_clan_member_cb,
     delete_clan_member_cb,

@@ -107,9 +107,13 @@ docks_clan_commands:
     
     debug:
       _callback_: "debug_cb"
-      enable:
-        _desc_: "Enable debug log to file"
-        _type_: "bool"
+      _desc_: "Debug configurations"
+      name:
+        _desc_: "Name of log file"
+        _type_: "string"
+      level:
+        _desc_: "Set log level"
+        _type_: "string"
 
   _opers_:
     member:
@@ -120,6 +124,7 @@ docks_clan_commands:
         _type_: "string"
       stat:
         _desc_: "Clan member's stat via Hiscore API"
+        _type_: "empty"
     members:
       _desc_: "clan members' info"
       _callback_: "show_clan_members_cb"
@@ -133,8 +138,8 @@ docks_clan_commands:
         _desc_: "Last rank date"
         _type_: "date"
     db:
+      _desc_: "DB info"
       cache:
         _callback_: "show_db_cache_cb"
         _desc_: "List database cache"
         _type_: "empty"
-      

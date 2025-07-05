@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from discord import app_commands, Thread, EntityType, PrivacyLevel, EventStatus
 
 from discord_bot import err_embed, info_embed
-from util import RESPONSE_ERR, err_print, debug_print
+from util import logger, RESPONSE_ERR
 
 
 OPTIONS = ["add", "update", "delete", "notify"]
@@ -133,7 +133,7 @@ async def event_cb(BOT, ctx, option, start_time, end_time, tzone):
                 await reply_msg.edit(embeds=[success])
         
         except Exception as e:
-            err_print(f"Error caught in {option}: {str(e)}")
+            logger.err(f"Error caught in {option}: {str(e)}")
         
         if forum_thread.id in EVENTS_SET:
             EVENTS_SET.remove(forum_thread.id)
@@ -320,6 +320,6 @@ async def find_thread_scheduled_event(BOT, forum_thread):
                         event = await BOT.guild.fetch_scheduled_event(event_id, with_counts=False)
                         return event
                     except:
-                        debug_print(f"No event found with {event_id}, keep searching")
+                        logger.debug(f"No event found with {event_id}, keep searching")
 
     return None
