@@ -61,7 +61,7 @@ class EmptyType(NodeType):
     def parse(cls, op: str, value: str, **kwargs) -> Union[Self, None]:
         if op or value:
             raise ValueError(f"EmptyNode({op}, {value}) should not have any operation or value")
-        return cls('', '')
+        return cls('', True)
 
 
 class BoolType(NodeType):

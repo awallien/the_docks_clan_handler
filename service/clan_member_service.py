@@ -7,16 +7,8 @@ from entity import ClanMember, ClanMemberRankEnum
 
 class ClanMemberService:
     
-    def __init__(self):
-        self._clan_member_dao = ClanMemberDFDAO()
-
-    def get_db(self):
-        return self._clan_member_dao.db
-    
-    def set_db(self, df_db):
-        """Set the DataFrame Database instance"""
-        self._clan_member_dao.db = df_db
-        return True
+    def __init__(self, db):
+        self._clan_member_dao = ClanMemberDFDAO(db)
 
     def add_member(self, name: str, joined_date: datetime):
         clan_member = ClanMember(name, joined_date)

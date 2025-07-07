@@ -23,7 +23,7 @@ class AccountTypes(Enum):
 class Hiscore:
     def __init__(self, username: str, account_type: AccountTypes = None):
         self._username = username
-        self._account_type = account_type if account_type else AccountTypes.NORMAL
+        self._account_type = account_type or AccountTypes.NORMAL
         
         self._total_xp = -1
         self._total_rank = -1

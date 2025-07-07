@@ -111,14 +111,14 @@ docks_clan_commands:
       name:
         _desc_: "Name of log file"
         _type_: "string"
-      level:
-        _desc_: "Set log level"
-        _type_: "string"
+      enable:
+        _desc_: "Enable level debug"
+        _type_: "bool"
 
   _opers_:
     member:
       _desc_: "clan member's info"
-      _callback_: "show_clan_members_cb"
+      _callback_: "show_clan_member_cb"
       name:
         _desc_: "Name of clan member"
         _type_: "string"

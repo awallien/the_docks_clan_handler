@@ -1,35 +1,37 @@
 
-from datetime import datetime
 from service import ClanMemberService
-
+from logging import DEBUG, ERROR
 from db import DataFrameDatabaseDirCache, DataFrameDatabase
 from dao import ClanMemberFields
-from util import set_logger_level
+from util import set_logger_level, Hiscore
 from .mgmt_abc import ICallbackMapper
 from .mgmt_util import convert_to_datetime
-import threading
-import functools
 
-_lock = threading.Lock()
-_current_lock_holder = {"name": ""}
+# @db_is_loaded
+# @db_lock
+# def show_clan_members_cb(**kwargs):
+#     if 'name' in kwargs:
+#         members = docks_clan_cb.clan_member_service.get_member(kwargs['name'])
+#     else:
+#         joined_date = kwargs.get('joined_date', None)
+#         rank = kwargs.get('rank', None)
+#         total_xp = kwargs.get('total_xp', None)
+#         last_rank_date = kwargs.get('last_rank_date', None)
+#         filter_query = docks_clan_cb.build_query(
+#             joined_date=joined_date,
+#             rank=rank,
+#             total_xp=total_xp,
+#             last_rank_date=last_rank_date
+#         )
+#         members = docks_clan_cb.clan_member_service.get_members(filter_query)
+    
+#     for member in members:
+#         print(f"{member.member}, {member.joined_date}, {member.rank}")
 
-def db_lock(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        func_name = func.__name__
-        while True:
-            with _lock:
-                if _current_lock_holder["name"] == "" or _current_lock_holder["name"] == func_name:
-                    _current_lock_holder["name"] = func_name
-                    break
-            # Wait and retry
-            threading.Event().wait(0.01)
-        try:
-            return func(*args, **kwargs)
-        finally:
-            with _lock:
-                _current_lock_holder["name"] = ""
-    return wrapper
+# @db_lock
+# def show_db_cache_cb(_) -> None:
+#     db_cache_list = docks_clan_cb.cache.cache_list()
+#     print(db_cache_list)
 
 
 class _DocksClanCommandsCallback(ICallbackMapper):
@@ -37,185 +39,165 @@ class _DocksClanCommandsCallback(ICallbackMapper):
     def __init__(self):
         self._cache: DataFrameDatabaseDirCache          = DataFrameDatabaseDirCache()
         self._clan_member_service: ClanMemberService    = None
-        self._current_db: DataFrameDatabase             = None
+        self._db: DataFrameDatabase                     = None
         super().__init__()
 
-    @property
-    def clan_member_service(self):
-        return self._clan_member_service
-    
-    @property
-    def cache(self):
-        return self._cache 
 
     def new_database(self):
-        if self.db_is_loaded():
-            resp = input(
-                "A database is already loaded. Do you want to save your current one? (y/n): "
-            ).strip().lower()
-            if resp == 'y':
-                fname = input("Enter the filename to save the current database: ").strip()
-                if not self.save_database(fname):
-                    print("Failed to save the current database.")
-                    return False
-        self._clan_member_service = ClanMemberService()
-        self._current_db = self._clan_member_service.get_db()
+        self._db = DataFrameDatabase(prim_cols=ClanMemberFields.primary(),
+                                     cols = ClanMemberFields.values(),
+                                     prim_cols_sort_fn=ClanMemberFields.primary_sort)
+        self._clan_member_service = ClanMemberService(self._db)
+
+    def save_database(self, fname):
+        if not self._db or not fname:
+            return False
+
+        return self._cache.save(self._db, fname)
+
+    def load_database(self, f_name: str = "", f_idx: int = -1):
+        if not (f_name or f_idx >= 0):
+            return False
+        
+        self._db = self._cache.load(ClanMemberFields, f_name, f_idx)
+        if not self._db:
+            return False
+        
+        self._clan_member_service = ClanMemberService(self._db)
         return True
 
+    def delete_database(self, f_name: str = "", f_idx: int = -1):
+        if not self._db:
+            return False
+        
+        if not (f_name or f_idx >= 0):
+            return False
+        
+        return self._cache.delete(f_name, f_idx)
 
-    def save_database(self, fname: str) -> bool:
-        """Save current database to file"""
-        if not fname:
+    def add_member(self, name, joined_date):
+        if not self._db or not self._clan_member_service:
             return False
         
-        if self._current_db is None:
+        if not name or not (joined_date := convert_to_datetime(joined_date)):
             return False
         
-        return self.cache.save(fname=fname, db=self._current_db)
+        return self._clan_member_service.add_member(name, joined_date)
 
-    def load_database(self, fname: str, cache_f_idx: int = -1) -> bool:
-        """Load database from file"""
-        if not (fname or cache_f_idx >= 0):
+    def update_member(self, name, joined_date, rank, total_xp):
+        if not self._db or not self._clan_member_service:
             return False
         
-        cols = ClanMemberFields
-        self._current_db = self.cache.load(cols, fname=fname, cache_f_idx=cache_f_idx)
+        return self._clan_member_service.update_member(name, joined_date, rank, total_xp)
+
+    def delete_member(self, name):
+        if not self._db or not self._clan_member_service:
+            return False
         
-        return self._current_db is not None
+        return self._clan_member_service.delete_member(name)
     
-    def delete_database(self, fname: str = None, cache_f_idx: int = -1) -> bool:
-        """Delete database from cache"""
-        if not (fname or cache_f_idx >= 0) or not self.db_is_loaded():
+    def get_member(self, name, show_stat):
+        if not self._db or not self._clan_member_service:
             return False
         
-        return self.cache.delete(fname=fname, f_idx=cache_f_idx)
-
-    def db_is_loaded(self) -> bool:
-        return self._current_db is not None
-        
-
-docks_clan_cb = _DocksClanCommandsCallback()
-
-# Wrapper for functions to check if a db is loaded for certain callbacks
-def db_is_loaded(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        if not docks_clan_cb.db_is_loaded():
+        clan_info = self._clan_member_service.get_member(name)
+        if not clan_info:
             return False
-        return func(*args, **kwargs)
-    return wrapper
+        
+        return Hiscore(name) if show_stat else "N/A"
 
+    def get_members(self, joined_date, rank, total_xp, last_rank_date):
+        if not self._db or not self._clan_member_service:
+            return False
+        
+        query = ""
 
-@db_is_loaded
-@db_lock
-def add_clan_member_cb(**kwargs) -> bool:
-    name = kwargs.get('name', None)
-    joined_date = kwargs.get('joined_date', None)
+        if joined_date:
+            if not (joined_date := convert_to_datetime(joined_date)):
+                return False
+            query += "Joined_Date"
 
-    if not (name and joined_date):
-        return False
+    def show_database_cache(self):
+        return self._cache.cache_list()
 
-    return docks_clan_cb.clan_member_service.add_member(name, joined_date)
+cbs = _DocksClanCommandsCallback()
 
-@db_is_loaded
-@db_lock
-def update_clan_member_cb(**kwargs) -> bool:
-    if not (name := kwargs.get('name', None)):
-        return False
-    joined_date = kwargs.get('joined_date', None)
-    rank = kwargs.get('rank', None)
-    total_xp = kwargs.get('total_xp', None)
-    docks_clan_cb.clan_member_service.update_member(
-        name=name,
-        joined_date=convert_to_datetime(joined_date) if joined_date else None,
-        rank=rank,
-        total_xp=total_xp,
-    )
-    return True
+def new_db_cb(**kwargs):
+    return cbs.new_database()
 
-@db_is_loaded
-@db_lock
-def delete_clan_member_cb(**kwargs) -> bool:
-    if not (name := kwargs.get('name', None)):
-        return False
-    return docks_clan_cb.clan_member_service.delete_member(kwargs['name'])
-
-@db_lock
-def new_db_cb(**kwargs) -> bool:
-    return docks_clan_cb.new_database()
-
-@db_is_loaded
-@db_lock
 def save_db_cb(**kwargs):
-    fname = kwargs.get('name', None)
+    fname = kwargs.get("name", "")
     if not fname:
         return False
-    return docks_clan_cb.save_database(fname)
-
-@db_lock
-def load_db_cb(**kwargs):
-    fname = kwargs.get('name', None)
-    cache_f_idx = kwargs.get('cache_f_idx', -1)
-    if not (fname or cache_f_idx >= 0):
-        return False
-    return docks_clan_cb.load_database(fname=fname, cache_f_idx=cache_f_idx)
-
-@db_is_loaded
-@db_lock
-def delete_db_cb(**kwargs) -> bool:
-    fname = kwargs.get('name', None)
-    cache_f_idx = kwargs.get('cache_f_idx', -1)
-    if not (fname or cache_f_idx >= 0):
-        return False
-    return docks_clan_cb.delete_database(fname=fname, f_idx=cache_f_idx)
-
-@db_is_loaded
-@db_lock
-def show_clan_members_cb(**kwargs):
-    if 'name' in kwargs:
-        members = docks_clan_cb.clan_member_service.get_member(kwargs['name'])
-    else:
-        joined_date = kwargs.get('joined_date', None)
-        rank = kwargs.get('rank', None)
-        total_xp = kwargs.get('total_xp', None)
-        last_rank_date = kwargs.get('last_rank_date', None)
-        filter_query = docks_clan_cb.build_query(
-            joined_date=joined_date,
-            rank=rank,
-            total_xp=total_xp,
-            last_rank_date=last_rank_date
-        )
-        members = docks_clan_cb.clan_member_service.get_members(filter_query)
     
-    for member in members:
-        print(f"{member.member}, {member.joined_date}, {member.rank}")
+    return cbs.save_database(fname)
 
-@db_lock
-def show_db_cache_cb(_) -> None:
-    db_cache_list = docks_clan_cb.cache.cache_list()
-    print(db_cache_list)
+def load_db_cb(**kwargs):
+    fname = kwargs.get("name", "")
+    f_idx = kwargs.get("index", -1)
+    return cbs.load_database(fname, f_idx)
+
+def delete_db_cb(**kwargs):
+    fname = kwargs.get("name", "")
+    f_idx = kwargs.get("index", -1)
+    return cbs.delete_database(fname, f_idx)
+
+def add_clan_member_cb(**kwargs):
+    name = kwargs.get("name", "")
+    joined_date = kwargs.get("joined_date", "")
+    return cbs.add_member(name, joined_date)
+
+def update_clan_member_cb(**kwargs):
+    name = kwargs.get("name", "")
+    joined_date = kwargs.get("joined_date", "")
+    rank = kwargs.get("rank", "")
+    total_xp = kwargs.get("total_xp", "")
+    cbs.update_member(name, joined_date, rank, total_xp)
+
+def delete_clan_member_cb(**kwargs):
+    name = kwargs.get("name", "")
+    return cbs.delete_member(name)
 
 def debug_cb(**kwargs):
-    if not (level := kwargs.get("level", None)):
-        return False
-    
     name = kwargs.get("name", "")
-    return set_logger_level(level, name)
+    enable = kwargs.get("enable", False)
+    if enable:
+        return set_logger_level(DEBUG, name)
+    else:
+        return set_logger_level(ERROR, name)
 
+def show_clan_member_cb(**kwargs):
+    name = kwargs.get("name", "")
+    stat = kwargs.get("stat", None)
+    return cbs.get_member(name, stat)
+
+def show_clan_members_cb(**kwargs):
+    joined_date = kwargs.get("joined_date", "")
+    rank = kwargs.get("rank", "")
+    total_xp = kwargs.get("total_xp", "")
+    last_rank_date = kwargs.get("last_rank-date", "")
+    return cbs.get_members(joined_date, rank, total_xp, last_rank_date)
+
+def show_db_cache_cb(**kwargs):
+    return cbs.show_database_cache()
 
 """ Register Commands """
 _internal_mapper_fns = [
-    add_clan_member_cb,
-    update_clan_member_cb,
-    delete_clan_member_cb,
+    new_db_cb,
     save_db_cb,
     load_db_cb,
     delete_db_cb,
+
+    add_clan_member_cb,
+    update_clan_member_cb,
+    delete_clan_member_cb,
+    
     debug_cb,
+
+    show_clan_member_cb,
     show_clan_members_cb,
     show_db_cache_cb,
-    new_db_cb
 ]
 
 for mapper_fn in _internal_mapper_fns:
-    docks_clan_cb.register(mapper_fn)
+    cbs.register(mapper_fn)

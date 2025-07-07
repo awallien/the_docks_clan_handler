@@ -5,5 +5,5 @@ def convert_to_datetime(date_str: str, date_format: str="%Y-%m-%d") -> datetime:
     try:
         date_obj = datetime.strptime(date_str, date_format)
         return date_obj
-    except:
+    except ValueError as e:
         return False

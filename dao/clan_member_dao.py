@@ -33,23 +33,8 @@ class ClanMemberFields(IDatabaseColumns):
 class ClanMemberDFDAO(IDao):
     """Clan Member DAO Impl for DataFrame Database"""
 
-    def __init__(self):
-        pass
-
-    def connect(self):
-        self._df_db = DataFrameDatabase(
-            prim_cols=ClanMemberFields.primary(),
-            cols=ClanMemberFields.values(),
-            prim_cols_sort_fn=ClanMemberFields.primary_sort
-        )
-
-    def close(self):
-        self._df_db = None
-
-    @property
-    def db(self) -> DataFrameDatabase:
-        """Get DataFrame Database instance"""
-        return self._df_db
+    def __init__(self, df_db):
+        self._df_db = df_db
 
     def add(self, obj: ClanMember) -> bool:
         """Add new clan member to DF Database"""

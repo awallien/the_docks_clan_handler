@@ -8,14 +8,6 @@ class IDao(ABC):
     """Interface for DAO class"""
 
     @abstractmethod
-    def connect(self) -> None:
-        pass
-
-    @abstractmethod
-    def close(self) -> None:
-        pass
-
-    @abstractmethod
     def add(self, obj: IEntity) -> bool:
         pass
 
