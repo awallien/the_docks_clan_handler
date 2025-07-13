@@ -9,7 +9,7 @@ import yaml
 from datetime import datetime
 
 from .docks_clan_cb import docks_clan_cb
-from .mgmt_abc import ICallbackMapper
+from .mgmt_abc import ICallbackMapper, INodeType, INode
 
 def TAB(n): return "  "*n
 
@@ -23,39 +23,9 @@ base_types: Set[str] = {
 }
 
 
-class NodeType(ABC):
+class EmptyType(INodeType):
     def __init__(self, op, value):
-        self._op = op
-        self._value = value
-        pass
-
-    @property
-    def op(self) -> str:
-        return self._op
-
-    @property
-    def value(self) -> str:
-        return self._value
-
-    @staticmethod
-    def _raise_unsupported_ops(op: str, ops: List[str]) -> True:
-        if op not in ops:
-            raise ValueError(f"Operation '{op}' is not supported. Supported operations are: {', '.join(ops)}")
-        return True
-
-    @classmethod
-    @abstractmethod
-    def parse(cls, op: str, value: str, **kwargs) -> Union[Self, None]:
-        pass
-
-    def expr_str(self, other: str) -> str:
-        if not self._op or not other:
-            return ""
-        return f"{other} {self._op} {self._value}"
-
-class EmptyType(NodeType):
-    def __init__(self, op, value):
-        super().__init__(op, value)
+        super().__init__(op, value, "empty")
 
     @classmethod
     def parse(cls, op: str, value: str, **kwargs) -> Union[Self, None]:
@@ -64,9 +34,9 @@ class EmptyType(NodeType):
         return cls('', True)
 
 
-class BoolType(NodeType):
+class BoolType(INodeType):
     def __init__(self, op, value):
-        super().__init__(op, value)
+        super().__init__(op, value, "bool")
 
     @classmethod
     def parse(cls, op: str, value: str, **kwargs) -> Union[Self, None]:
@@ -79,31 +49,32 @@ class BoolType(NodeType):
         raise ValueError(f"BoolNode({op}, {value}) should only have '=' operation with 'true' or 'false' value")
 
 
-class StringType(NodeType):
+class StringType(INodeType):
     def __init__(self, op, value):
-        super().__init__(op, value)
+        super().__init__(op, value, "string")
 
     @classmethod
     def parse(cls, op: str, value: str, **kwargs) -> Union[Self, None]:
         if cls._raise_unsupported_ops(op, ["="]) and isinstance(value, str):
-            return cls(op, value)
+            return cls(op, str(value))
         raise ValueError(f"StringNode({op}, {value}) only supports '=' operation with a non-empty string value")
 
-class UIntType(NodeType):
+
+class UIntType(INodeType):
     def __init__(self, op, value):
-        super().__init__(op, value)
+        super().__init__(op, value, "uint")
 
     @classmethod
     def parse(cls, op: str, value: str, **kwargs) -> Union[Self, None]:
         if not value.isdigit() and int(value) < 0:
             raise ValueError(f"UIntNode({op}, {value}) should only have a non-negative integer value")
         cls._raise_unsupported_ops(op, ["=", "<", ">"])
-        return cls(op, value)
+        return cls(op, int(value))
 
 
-class DateType(NodeType):
+class DateType(INodeType):
     def __init__(self, op, value):
-        super().__init__(op, value)
+        super().__init__(op, value, "date")
     
     @classmethod
     def parse(cls, op: str, value: str, **kwargs) -> Union[Self, None]:
@@ -113,12 +84,12 @@ class DateType(NodeType):
             raise ValueError(f"DateNode({op}, {value}) '{value}' is not a valid datetime string")
 
         cls._raise_unsupported_ops(op, ["=", "<", ">"])
-        return cls(op, dt.strftime("%Y-%m-%d"))
+        return cls(op, dt)
 
 
-class EnumType(NodeType):
+class EnumType(INodeType):
     def __init__(self, op, value):
-        super().__init__(op, value)
+        super().__init__(op, value, "enum")
         
     @classmethod
     def parse(cls, op: str, value: str, **kwargs) -> Union[Self, None]:
@@ -131,56 +102,14 @@ class EnumType(NodeType):
         return cls(op, value)
 
 
-class Node(ABC):
-    def __init__(self, name, def_type, desc, fn_cb=None):
-        self._name : str = name
-        self._def_type : str = def_type
-        self._desc : str = desc
-        self._fn_cb : Callable = fn_cb
-
-    @property
-    def name(self) -> str:
-        return self._name
-    
-    @property
-    def def_type(self) -> str:
-        return self._def_type
-
-    @property
-    def desc(self) -> str:
-        return self._desc
-    
-    @property
-    def fn_cb(self) -> Callable:
-        return self.fn_cb
-    
-    @classmethod
-    @abstractmethod
-    def parse_yaml(cls, data) -> Any:
-        pass
-
-    @abstractmethod
-    def process(self, cmd_lst:List[str]) -> Any:
-        pass
-
-    def _validate_process_syntax(self, cmd, cmd_len=None) -> bool:
-        def raise_msg(msg):
-            return f"Invalid syntax: {msg}"
-
-        if cmd_len and not cmd_len == len(cmd):
-            raise SyntaxError(raise_msg(f"Length of command does not match length {cmd_len}"))
-        if "=" not in cmd:
-            raise SyntaxError(raise_msg(f"{cmd} does not contain '='"))
-
-
-class YamlLeafNode(Node):
+class YamlLeafNode(INode):
     def __init__(self, name, def_type, desc, fn_cb, node_type, alias):
-        self._node_type: Type[NodeType] = node_type
-        self._alias: Node = alias
+        self._node_type: INodeType = node_type
+        self._alias: INode = alias
         super().__init__(name, def_type, desc, fn_cb)
     
     @classmethod
-    def parse_yaml(cls, data: dict, typedefs: YamlTypeDefs) -> Self:
+    def parse_yaml(cls, data: dict, typedefs: YamlTypeDefs, mapper_cb: ICallbackMapper) -> Self:
         """Parse a leaf node including types: empty, string, uint, date, bool, and custom types from type defs"""
         if data:
             if len(data) > 1:
@@ -193,6 +122,11 @@ class YamlLeafNode(Node):
                 if leaf_type is None:
                     raise TypeError(f"Leaf value does not exist for {leaf_name}")
                 
+                if fn_cb:
+                    if fn_cb not in mapper_cb:
+                        raise ValueError(f"Leaf {leaf_name} fn cb {fn_cb} not found in mapper")
+                    fn_cb = mapper_cb[fn_cb]
+
                 leaf_type, alias = typedefs.get_type(leaf_type) or (leaf_type, dict())
                 match leaf_type:
                     case "empty":
@@ -213,11 +147,13 @@ class YamlLeafNode(Node):
 
             return cls(leaf_name, leaf_type, desc_type, fn_cb, node_type, alias)
 
-    def process(self, op, value) -> NodeType:
-        return self._node_type.parse(op, value, **self._alias)
+    def process(self, op, value) -> INodeType:
+        node = self._node_type.parse(op, value, **self._alias)
+        if self.fn_cb and not self.fn_cb(**{self.name: node}):
+            raise ValueError(f"Callback failed in {self._fn_cb.__name__}")
+        return node
 
-
-class YamlEnumNode(Node):
+class YamlEnumNode(INode):
     
     def __init__(self, name, values, desc):
         self._values: dict = values
@@ -253,7 +189,7 @@ class YamlTypeDefs:
 
     def __init__(self, type_defs, aliases):
         self._type_defs: Dict[str, str] = type_defs 
-        self._aliases: Dict[str, Node] = aliases
+        self._aliases: Dict[str, INode] = aliases
 
     @classmethod
     def parse_yaml(cls, data: dict) -> Self:
@@ -282,7 +218,7 @@ class YamlTypeDefs:
     def contains(self, member: str) -> bool:
         return member in self._type_defs
     
-    def get_typedef(self, member: str) -> Optional[Node]:
+    def get_typedef(self, member: str) -> Optional[INode]:
         return self._aliases.get(member, None)
     
     def get_type(self, member: str) -> Union[str]:
@@ -338,7 +274,7 @@ class YamlBlock:
                         assert values_value in mapper_cb, f"Cannot find callback {values_value} in mapper"
                         cb_fn = mapper_cb[values_value]
                     case _ if "_type_" in values_value:
-                        blocks[values_name] = YamlLeafNode.parse_yaml({values_name:values_value}, typedefs)
+                        blocks[values_name] = YamlLeafNode.parse_yaml({values_name:values_value}, typedefs, mapper_cb)
                     case _:
                         blocks[values_name] = YamlBlock.parse_yaml({values_name:values_value}, typedefs, mapper_cb)
             return cls(block_name, desc, blocks, cb_fn)
@@ -428,7 +364,7 @@ class YamlConfigs:
             case _ if (block := self._blocks.get(cmd_list[0], None)):
                 return block.process(cmd_list[1:])
             case _:
-                return False
+                raise ValueError(f"Invalid command, {cmd_list[0]} does not exist.")
 
 
 class YamlOpers:
@@ -467,7 +403,7 @@ class YamlOpers:
             case _ if (block := self._blocks.get(cmd_list[0], None)):
                 return block.process(cmd_list[1:])
             case _:
-                return False
+                raise ValueError(f"Invalid command, {cmd_list[0]} does not exist.")
 
 
 class YamlRootNode:
@@ -496,15 +432,17 @@ class YamlRootNode:
         """
         if not cmd_list:
             return True
-
-        match cmd_list[0].lower():
-            case "show":
-                return self._opers.process(cmd_list[1:])
-            case "config":
-                #TODO: parse "no" and pass into configs
-                return self._configs.process(cmd_list[1:])
-            case _:
-                return ""
+        try:
+            match cmd_list[0].lower():
+                case "show":
+                    return self._opers.process(cmd_list[1:])
+                case "config":
+                    #TODO: parse "no" and pass into configs
+                    return self._configs.process(cmd_list[1:])
+                case _:
+                    return ""
+        except Exception as e:
+            print(f"Error: {e}")
 
 class YamlCommandParser:
     _yaml_dir: str = os.path.join(str(pathlib.Path(__file__).parent.absolute()),"yaml")

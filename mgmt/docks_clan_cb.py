@@ -5,33 +5,7 @@ from db import DataFrameDatabaseDirCache, DataFrameDatabase
 from dao import ClanMemberFields
 from util import set_logger_level, Hiscore
 from .mgmt_abc import ICallbackMapper
-from .mgmt_util import convert_to_datetime
-
-# @db_is_loaded
-# @db_lock
-# def show_clan_members_cb(**kwargs):
-#     if 'name' in kwargs:
-#         members = docks_clan_cb.clan_member_service.get_member(kwargs['name'])
-#     else:
-#         joined_date = kwargs.get('joined_date', None)
-#         rank = kwargs.get('rank', None)
-#         total_xp = kwargs.get('total_xp', None)
-#         last_rank_date = kwargs.get('last_rank_date', None)
-#         filter_query = docks_clan_cb.build_query(
-#             joined_date=joined_date,
-#             rank=rank,
-#             total_xp=total_xp,
-#             last_rank_date=last_rank_date
-#         )
-#         members = docks_clan_cb.clan_member_service.get_members(filter_query)
-    
-#     for member in members:
-#         print(f"{member.member}, {member.joined_date}, {member.rank}")
-
-# @db_lock
-# def show_db_cache_cb(_) -> None:
-#     db_cache_list = docks_clan_cb.cache.cache_list()
-#     print(db_cache_list)
+from .mgmt_util import get_leaf_values
 
 
 class _DocksClanCommandsCallback(ICallbackMapper):
@@ -48,6 +22,7 @@ class _DocksClanCommandsCallback(ICallbackMapper):
                                      cols = ClanMemberFields.values(),
                                      prim_cols_sort_fn=ClanMemberFields.primary_sort)
         self._clan_member_service = ClanMemberService(self._db)
+        return True
 
     def save_database(self, fname):
         if not self._db or not fname:
@@ -79,7 +54,7 @@ class _DocksClanCommandsCallback(ICallbackMapper):
         if not self._db or not self._clan_member_service:
             return False
         
-        if not name or not (joined_date := convert_to_datetime(joined_date)):
+        if not name or not joined_date:
             return False
         
         return self._clan_member_service.add_member(name, joined_date)
@@ -106,80 +81,80 @@ class _DocksClanCommandsCallback(ICallbackMapper):
         
         return Hiscore(name) if show_stat else "N/A"
 
-    def get_members(self, joined_date, rank, total_xp, last_rank_date):
+    def get_members(self, query):
         if not self._db or not self._clan_member_service:
             return False
-        
-        query = ""
-
-        if joined_date:
-            if not (joined_date := convert_to_datetime(joined_date)):
-                return False
-            query += "Joined_Date"
+        return self._clan_member_service.get_members(query)
 
     def show_database_cache(self):
         return self._cache.cache_list()
 
-cbs = _DocksClanCommandsCallback()
+docks_clan_cb = _DocksClanCommandsCallback()
 
 def new_db_cb(**kwargs):
-    return cbs.new_database()
+    return docks_clan_cb.new_database()
 
 def save_db_cb(**kwargs):
-    fname = kwargs.get("name", "")
-    if not fname:
-        return False
-    
-    return cbs.save_database(fname)
+    values = get_leaf_values(["name"], kwargs).results
+    fname = values.get("name", "")
+    return docks_clan_cb.save_database(fname)
 
 def load_db_cb(**kwargs):
-    fname = kwargs.get("name", "")
-    f_idx = kwargs.get("index", -1)
-    return cbs.load_database(fname, f_idx)
+    values = get_leaf_values(["name", "index"], kwargs).results
+    fname = values.get("name", "")
+    f_idx = values.get("index", -1)
+    return docks_clan_cb.load_database(fname, f_idx)
 
 def delete_db_cb(**kwargs):
-    fname = kwargs.get("name", "")
-    f_idx = kwargs.get("index", -1)
-    return cbs.delete_database(fname, f_idx)
+    values = get_leaf_values(["name", "index"], kwargs).results
+    fname = values.get("name", "")
+    f_idx = values.get("index", -1)
+    return docks_clan_cb.delete_database(fname, f_idx)
 
 def add_clan_member_cb(**kwargs):
-    name = kwargs.get("name", "")
-    joined_date = kwargs.get("joined_date", "")
-    return cbs.add_member(name, joined_date)
+    values = get_leaf_values(["name", "joined_date"], kwargs).results
+    name = values.get("name", "")
+    joined_date = values.get("joined_date", "")
+    return docks_clan_cb.add_member(name, joined_date)
 
 def update_clan_member_cb(**kwargs):
-    name = kwargs.get("name", "")
-    joined_date = kwargs.get("joined_date", "")
-    rank = kwargs.get("rank", "")
-    total_xp = kwargs.get("total_xp", "")
-    cbs.update_member(name, joined_date, rank, total_xp)
+    values = get_leaf_values(["name", "joined_date", "rank", "total_xp"], kwargs).results
+    name = values.get("name", "")
+    joined_date = values.get("joined_date", "")
+    rank = values.get("rank", "")
+    total_xp = values.get("total_xp", "")
+    return docks_clan_cb.update_member(name, joined_date, rank, total_xp)
 
 def delete_clan_member_cb(**kwargs):
-    name = kwargs.get("name", "")
-    return cbs.delete_member(name)
+    values = get_leaf_values(["name"], kwargs).results
+    name = values.get("name", "")
+    return docks_clan_cb.delete_member(name)
 
 def debug_cb(**kwargs):
-    name = kwargs.get("name", "")
-    enable = kwargs.get("enable", False)
+    values = get_leaf_values(["name", "enable"], kwargs).results
+    name = values.get("name", "")
+    enable = values.get("enable", False)
     if enable:
         return set_logger_level(DEBUG, name)
     else:
         return set_logger_level(ERROR, name)
 
 def show_clan_member_cb(**kwargs):
-    name = kwargs.get("name", "")
-    stat = kwargs.get("stat", None)
-    return cbs.get_member(name, stat)
+    values = get_leaf_values(["name", "stat"], kwargs).results
+    name = values.get("name", "")
+    stat = values.get("stat", False)
+    return docks_clan_cb.get_member(name, stat)
 
 def show_clan_members_cb(**kwargs):
-    joined_date = kwargs.get("joined_date", "")
-    rank = kwargs.get("rank", "")
-    total_xp = kwargs.get("total_xp", "")
-    last_rank_date = kwargs.get("last_rank-date", "")
-    return cbs.get_members(joined_date, rank, total_xp, last_rank_date)
+    query = get_leaf_values(
+        ["joined_date", "rank", "total_xp", "last_rank_date"],
+        kwargs,
+        build_query=True
+    ).query
+    return docks_clan_cb.get_members(query)
 
 def show_db_cache_cb(**kwargs):
-    return cbs.show_database_cache()
+    return docks_clan_cb.show_database_cache()
 
 """ Register Commands """
 _internal_mapper_fns = [
@@ -200,4 +175,4 @@ _internal_mapper_fns = [
 ]
 
 for mapper_fn in _internal_mapper_fns:
-    cbs.register(mapper_fn)
+    docks_clan_cb.register(mapper_fn)

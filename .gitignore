@@ -5,3 +5,4 @@ activities.py
 skills.py
 bosses.py
 logs/
+db/cache/

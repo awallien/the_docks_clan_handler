@@ -15,10 +15,10 @@ class ClanMemberService:
                    joined_date: Optional[int] = None,
                    rank: Optional[ClanMemberRankEnum] = None,
                    total_xp: Optional[int] = None) -> bool:
-        clan_member = ClanMember(name, joined_date)
+        clan_member = ClanMember(name, joined_date or datetime.now().toordinal())
         clan_member.rank = rank or ClanMemberRankEnum.RANK_1.value
         clan_member.last_rank_date = datetime.now().toordinal()
-        clan_member.total_xp = total_xp
+        clan_member.total_xp = total_xp or 0
         return self._clan_member_dao.add(clan_member)
 
     def update_member(self,
