@@ -208,6 +208,11 @@ class DataFrameDatabase:
         new_dfdb._db = df.astype(new_dfdb._get_db_col_types())
         return new_dfdb
 
+    def to_parquet(self, fpath: str) -> bool:
+        self._db.to_parquet(fpath, index=False)
+        return True
+
+
     def _create_table(self) -> pd.DataFrame:
         """Create DataFrame table""" 
         db_col_types = self._get_db_col_types()
@@ -223,7 +228,7 @@ class DataFrameDatabase:
         for db_col in self._cols:
             col_type = None
             if db_col.dtype == "category":
-                col_type = pd.CategoricalDtype(db_col.categories)
+                col_type = pd.CategoricalDtype(db_col.categories, ordered=True)
             else:
                 col_type = db_col.dtype
             

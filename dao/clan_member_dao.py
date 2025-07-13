@@ -78,9 +78,7 @@ class ClanMemberDFDAO(IDao):
     def delete(self, obj: ClanMember) -> bool:
         """Delete clan member from DF Database"""
         db_row = DatabaseRow()
-
         db_row.put(ClanMemberFields.MEMBER.value, obj.member)
-
         return self._df_db.delete_row(db_row)
 
     def get_all(self, filter_expr: str='') -> List[ClanMember]:
