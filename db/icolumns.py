@@ -1,6 +1,7 @@
 
 from typing import Callable, List, Any, Union
-from abc import ABC
+from abc import ABCMeta, abstractmethod
+from enum import Enum, EnumMeta
 
 class DatabaseColumn:
     """Database Column containing the name of the column and default value"""
@@ -10,17 +11,16 @@ class DatabaseColumn:
         self._default : Any     = default
 
         # https://pandas.pydata.org/docs/user_guide/basics.html#basics-dtypes
-        self._dtype: str        = dtype
+        self._dtype: Any        = dtype
 
         # only used if dtype is 'category'
         self._categories: List[Union[str, int]] = categories
 
         # Check if dtype is valid
         if self._dtype == "category":
-            assert isinstance(self._categories, list), \
-                "`categories` must be a list if dtype is `category`"
-            assert all(isinstance(cat, (str, int)) for cat in self._categories), \
-                "`categories` must be a list of str or int if dtype is `category`"
+            assert isinstance(self._categories, list) and \
+                    all(isinstance(cat, (str, int)) for cat in self._categories), \
+                    "`categories` must be a list of str or int if dtype is `category`"
     
     @property
     def name(self):
@@ -56,24 +56,38 @@ class DatabaseColumn:
             self.categories == self.categories
         )
     
+    def __hash__(self) -> int:
+        return hash(self.name)
+    
     def __repr__(self):
         return f"DatabaseColumn(name={self.name}, default={self.default}, dtype={self.dtype}, categories={self.categories})"
 
-class IDatabaseColumns(ABC):
-    """Interface for columns enumeration class"""
+
+class IDatabaseColumnsMeta(ABCMeta, EnumMeta):
+    """Metaclass combining ABCMeta and EnumMeta."""
+    pass
+
+class IDatabaseColumns(Enum, metaclass=IDatabaseColumnsMeta):
+    """Interface for columns enumeration class."""
 
     @classmethod
     def members(cls) -> List[Any]:
-        pass
+        """Return all enum members."""
+        return list(cls.__members__.keys())
 
     @classmethod
-    def values(cls) -> List[DatabaseColumn]:
-        pass
+    def values(cls) -> List['DatabaseColumn']:
+        """Return list of associated DatabaseColumn values."""
+        return [field.value for field in cls]
 
     @classmethod
-    def primary(cls) -> List[DatabaseColumn]:
+    @abstractmethod
+    def primary(cls) -> List['DatabaseColumn']:
+        """Return list of primary key columns."""
         pass
 
     @staticmethod
-    def primary_sort(col) -> Callable[[DatabaseColumn], str]:
+    @abstractmethod
+    def primary_sort(col: 'DatabaseColumn') -> Callable[['DatabaseColumn'], str]:
+        """Return a function that defines how to sort primary columns."""
         pass

@@ -4,19 +4,17 @@ from datetime import datetime
 from .ientity import IEntity
 from .rank import ClanMemberRankEnum
 
-# from entity import IEntity, ClanMemberRankEnum
-
 
 class ClanMember(IEntity):
     """Clan Member entity class"""
 
-    def __init__(self, member:str, joined_date:datetime):
+    def __init__(self, member:str, joined_date:int = 0):
         self._member : str                  = member
-        self._joined_date : datetime        = joined_date
+        self._joined_date : int             = joined_date
 
         self._rank : ClanMemberRankEnum     = ClanMemberRankEnum.RANK_INVALID
         self._total_xp : int                = -1
-        self._last_rank_date : datetime     = datetime.min
+        self._last_rank_date : int          = datetime.min.toordinal()
 
     @property
     def member(self):
@@ -48,8 +46,6 @@ class ClanMember(IEntity):
     
     @joined_date.setter
     def joined_date(self, value):
-        if not isinstance(value, datetime):
-            raise TypeError("ClanMember:joined_date:value is not a datetime:", value)
         self._joined_date = value
     
     @total_xp.setter
@@ -58,6 +54,10 @@ class ClanMember(IEntity):
 
     @last_rank_date.setter
     def last_rank_date(self, value):
-        if not isinstance(value, datetime):
-            raise TypeError("ClanMember:last_ranked_date:value is not a datetime:", value)
         self._last_rank_date = value
+
+    def __str__(self):
+        return f"ClanMember({self.member}, {self.joined_date}, {self.rank}, {self.total_xp}, {self.last_rank_date})"
+    
+    def __repr__(self):
+        return str(self)

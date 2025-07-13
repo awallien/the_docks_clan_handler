@@ -1,5 +1,5 @@
-from datetime import datetime
 from typing import Optional, List
+from datetime import datetime
 
 from dao import IDao
 from db import DatabaseColumn, DatabaseRow, DataFrameDatabase, IDatabaseColumns
@@ -7,19 +7,11 @@ from entity import ClanMember, ClanMemberRankEnum
 
 
 class ClanMemberFields(IDatabaseColumns):
-    MEMBER = DatabaseColumn("Member", "N/A", "string")
-    JOIN_DATE = DatabaseColumn("Join_Date", datetime.min, "datetime64[ns]")
-    RANK = DatabaseColumn("Rank", ClanMemberRankEnum.RANK_INVALID.value, "category", categories=ClanMemberRankEnum.values())
-    TOTAL_XP = DatabaseColumn("Total_XP", -1, "int64")
-    LAST_RANK_DATE = DatabaseColumn("Last_Rank_Date", datetime.min, "datetime64[ns]")
-
-    @classmethod
-    def members(cls):
-        return list(cls.__members__.keys())
-    
-    @classmethod
-    def values(cls):
-        return [field.value for field in cls]
+    MEMBER = DatabaseColumn("member", "N/A", 'string')
+    JOIN_DATE = DatabaseColumn("joined_date", datetime.min.toordinal(), 'Int64')
+    RANK = DatabaseColumn("rank", ClanMemberRankEnum.RANK_INVALID.value, "category", categories=ClanMemberRankEnum.values())
+    TOTAL_XP = DatabaseColumn("total_xp", -1, "Int64")
+    LAST_RANK_DATE = DatabaseColumn("last_rank_date", datetime.min.toordinal(), "Int64")
     
     @classmethod
     def primary(cls):
@@ -34,7 +26,7 @@ class ClanMemberDFDAO(IDao):
     """Clan Member DAO Impl for DataFrame Database"""
 
     def __init__(self, df_db):
-        self._df_db = df_db
+        self._df_db: DataFrameDatabase = df_db
 
     def add(self, obj: ClanMember) -> bool:
         """Add new clan member to DF Database"""
@@ -48,9 +40,13 @@ class ClanMemberDFDAO(IDao):
 
         return self._df_db.add_row(db_row)
 
-    def get(self, key: str) -> Optional[ClanMember]:
+    def get(self, member: str) -> Optional[ClanMember]:
         """Get clan member from DF Database"""
-        contents = self._df_db.get_row(key)
+        
+        prepped_row = DatabaseRow()
+        prepped_row.put(ClanMemberFields.MEMBER.value, member)
+
+        contents = self._df_db.get_row(prepped_row)
         if contents is None:
             return None
         
@@ -83,7 +79,7 @@ class ClanMemberDFDAO(IDao):
         """Delete clan member from DF Database"""
         db_row = DatabaseRow()
 
-        db_row.put(ClanMemberFields.MEMBER, obj.member)
+        db_row.put(ClanMemberFields.MEMBER.value, obj.member)
 
         return self._df_db.delete_row(db_row)
 
