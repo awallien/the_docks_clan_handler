@@ -9,17 +9,17 @@ from entity import ClanMember, ClanMemberRankEnum
 class ClanMemberFields(IDatabaseColumns):
     MEMBER = DatabaseColumn("member", "N/A", 'string')
     JOIN_DATE = DatabaseColumn("joined_date", datetime.min.toordinal(), 'Int64')
-    RANK = DatabaseColumn("rank", ClanMemberRankEnum.RANK_INVALID.value, "category", categories=ClanMemberRankEnum.values())
+    RANK = DatabaseColumn("rank", ClanMemberRankEnum.RANK_INVALID, "category", categories=ClanMemberRankEnum.values())
     TOTAL_XP = DatabaseColumn("total_xp", -1, "Int64")
     LAST_RANK_DATE = DatabaseColumn("last_rank_date", datetime.min.toordinal(), "Int64")
     
     @classmethod
     def primary(cls):
-        return (cls.MEMBER.value,)
+        return (cls.MEMBER,)
     
     @staticmethod
-    def primary_sort(col):
-        return col.str.lower()
+    def primary_sort(value):
+        return value.str.lower()
 
 
 class ClanMemberDFDAO(IDao):
@@ -32,11 +32,11 @@ class ClanMemberDFDAO(IDao):
         """Add new clan member to DF Database"""
         db_row = DatabaseRow()
 
-        db_row.put(ClanMemberFields.MEMBER.value, obj.member)
-        db_row.put(ClanMemberFields.JOIN_DATE.value, obj.joined_date)
-        db_row.put(ClanMemberFields.RANK.value, obj.rank)
-        db_row.put(ClanMemberFields.TOTAL_XP.value, obj.total_xp)
-        db_row.put(ClanMemberFields.LAST_RANK_DATE.value, obj.last_rank_date)
+        db_row.put(ClanMemberFields.MEMBER, obj.member)
+        db_row.put(ClanMemberFields.JOIN_DATE, obj.joined_date)
+        db_row.put(ClanMemberFields.RANK, obj.rank)
+        db_row.put(ClanMemberFields.TOTAL_XP, obj.total_xp)
+        db_row.put(ClanMemberFields.LAST_RANK_DATE, obj.last_rank_date)
 
         return self._df_db.add_row(db_row)
 
@@ -44,17 +44,17 @@ class ClanMemberDFDAO(IDao):
         """Get clan member from DF Database"""
         
         prepped_row = DatabaseRow()
-        prepped_row.put(ClanMemberFields.MEMBER.value, member)
+        prepped_row.put(ClanMemberFields.MEMBER, member)
 
         contents = self._df_db.get_row(prepped_row)
         if contents is None:
             return None
         
-        member = contents.get(ClanMemberFields.MEMBER.value)
-        joined_date = contents.get(ClanMemberFields.JOIN_DATE.value)
-        rank = contents.get(ClanMemberFields.RANK.value)
-        total_xp = contents.get(ClanMemberFields.TOTAL_XP.value)
-        last_rank_date = contents.get(ClanMemberFields.LAST_RANK_DATE.value)
+        member = contents.get(ClanMemberFields.MEMBER)
+        joined_date = contents.get(ClanMemberFields.JOIN_DATE)
+        rank = contents.get(ClanMemberFields.RANK)
+        total_xp = contents.get(ClanMemberFields.TOTAL_XP)
+        last_rank_date = contents.get(ClanMemberFields.LAST_RANK_DATE)
 
         clan_member = ClanMember(member, joined_date)
         clan_member.rank = rank
@@ -67,29 +67,29 @@ class ClanMemberDFDAO(IDao):
         """Update clan member info in DF Database"""
         db_row = DatabaseRow()
 
-        db_row.put(ClanMemberFields.MEMBER.value, obj.member)
-        db_row.put(ClanMemberFields.JOIN_DATE.value, obj.joined_date)
-        db_row.put(ClanMemberFields.RANK.value, obj.rank)
-        db_row.put(ClanMemberFields.TOTAL_XP.value, obj.total_xp)
-        db_row.put(ClanMemberFields.LAST_RANK_DATE.value, obj.last_rank_date)
+        db_row.put(ClanMemberFields.MEMBER, obj.member)
+        db_row.put(ClanMemberFields.JOIN_DATE, obj.joined_date)
+        db_row.put(ClanMemberFields.RANK, obj.rank)
+        db_row.put(ClanMemberFields.TOTAL_XP, obj.total_xp)
+        db_row.put(ClanMemberFields.LAST_RANK_DATE, obj.last_rank_date)
 
         return self._df_db.update_row(db_row)
 
     def delete(self, obj: ClanMember) -> bool:
         """Delete clan member from DF Database"""
         db_row = DatabaseRow()
-        db_row.put(ClanMemberFields.MEMBER.value, obj.member)
+        db_row.put(ClanMemberFields.MEMBER, obj.member)
         return self._df_db.delete_row(db_row)
 
     def get_all(self, filter_expr: str='') -> List[ClanMember]:
         """Get full list of clan members in DF Database"""
 
         def convert_dict_to_ClanMember(d_row):
-            member = d_row.get(ClanMemberFields.MEMBER.value)
-            joined_date = d_row.get(ClanMemberFields.JOIN_DATE.value)
-            rank = d_row.get(ClanMemberFields.RANK.value)
-            total_xp = d_row.get(ClanMemberFields.TOTAL_XP.value)
-            last_rank_date = d_row.get(ClanMemberFields.LAST_RANK_DATE.value)
+            member = d_row.get(ClanMemberFields.MEMBER)
+            joined_date = d_row.get(ClanMemberFields.JOIN_DATE)
+            rank = d_row.get(ClanMemberFields.RANK)
+            total_xp = d_row.get(ClanMemberFields.TOTAL_XP)
+            last_rank_date = d_row.get(ClanMemberFields.LAST_RANK_DATE)
 
             clan_member = ClanMember(member, joined_date)
             clan_member.rank = rank

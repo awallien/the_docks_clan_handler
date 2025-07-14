@@ -36,7 +36,7 @@ class RankService:
     @classmethod
     def get_next_rank(cls, hiscore_data, current_rank, current_joined_date) -> ClanMemberRankEnum:
         """Given the clan member's current, check and return the next rank"""       
-        
+        import pdb; pdb.set_trace()
         assert not current_rank == ClanMemberRankEnum.RANK_INVALID, "Clan member's rank is invalid"
         if ((current_rank == ClanMemberRankEnum.RANK_15) or
             (current_rank in ClanMemberRankEnum.honorable_ranks_challenged()) or
