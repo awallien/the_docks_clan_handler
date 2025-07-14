@@ -69,7 +69,7 @@ class _RankService:
         min_tolerance = cls.DAYS_PER_MONTH - cls.TOLERANCE_DAYS
         max_tolerance = cls.DAYS_PER_MONTH + cls.TOLERANCE_DAYS
 
-        return (min_tolerance <= days_diff <= max_tolerance)
+        return (min_tolerance <= days_diff <= max_tolerance) or (days_diff >= max_tolerance)
     
     @classmethod
     def _get_next_achieve_rank(cls, hiscore_data: Hiscore) -> ClanMemberRank:
@@ -81,14 +81,15 @@ class _RankService:
         non_cmb_avg = cls._get_non_cmb_skills_avg(hiscore_data)
 
         def chk_avg_range_or(left_val, right_val):
-            return ((left_val <= cmb_avg <= right_val) or
-                    (left_val <= non_cmb_avg <= right_val))
+            max_avg = max(cmb_avg, non_cmb_avg)
+            return left_val <= max_avg <= right_val
         
-        def chk_avg_range_and(left_val, right_val, non_cmb_avg_int=None):
-            if not non_cmb_avg_int:
-                non_cmb_avg_int = non_cmb_avg
+        def chk_avg_range_and(left_val, right_val, new_non_cmb_avg=None):
+            global non_cmb_avg
+            if new_non_cmb_avg:
+                non_cmb_avg = new_non_cmb_avg
             return ((left_val <= cmb_avg <= right_val) and
-                    (left_val <= non_cmb_avg_int <= right_val))
+                    (left_val <= non_cmb_avg <= right_val))
         
         def chk_achieve_rank_14(left_val, right_val):
             non_cmb_avg = cls._get_non_cmb_skills_avg(hiscore_data, n_highest=6)
@@ -137,10 +138,10 @@ class _RankService:
     def _get_non_cmb_skills_avg(cls, hiscore_data: Hiscore, n_highest=3) -> int:
         """Get average of non-combat skill levels of n_highest skills"""
         skills = hiscore_data.skills
-        skill_lvls = [(skill, skills.get(skill)) for skill in cls.NON_CMB_SKILLS]
-        skill_lvls.sort(key=lambda item: item[1].level, reverse=True)
+        skill_lvls = [skills.get(skill) for skill in cls.NON_CMB_SKILLS]
+        skill_lvls.sort(key=lambda item: item.level, reverse=True)
 
-        highest_skills = map(lambda s: s[1].level, skill_lvls[:n_highest])
+        highest_skills = map(lambda s: s.level, skill_lvls[:n_highest])
         avg_non_cmb_lvl = cls._get_avg(*highest_skills)
 
         return int(avg_non_cmb_lvl)
