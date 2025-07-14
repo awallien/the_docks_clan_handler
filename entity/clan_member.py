@@ -2,7 +2,7 @@
 from datetime import datetime
 
 from .ientity import IEntity
-from .rank import ClanMemberRankEnum
+from .rank import ClanMemberRank
 
 
 class ClanMember(IEntity):
@@ -12,7 +12,7 @@ class ClanMember(IEntity):
         self._member : str                  = member
         self._joined_date : int             = joined_date
 
-        self._rank : ClanMemberRankEnum     = ClanMemberRankEnum.RANK_INVALID
+        self._rank : ClanMemberRank         = ClanMemberRank.RANK_INVALID
         self._total_xp : int                = -1
         self._last_rank_date : int          = datetime.min.toordinal()
 

@@ -48,7 +48,7 @@ class AutoConstantsMeta(type):
         values = [
             v for k,v in class_dict.items()
             if not k.startswith("__") 
-            and not isinstance(v, (types.FunctionType, classmethod, staticmethod))
+            and not isinstance(v, (types.FunctionType, classmethod, staticmethod, property))
         ]
         class_dict["__constants__"] = values
         return super().__new__(cls, name, bases, class_dict)

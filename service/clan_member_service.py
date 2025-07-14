@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from dao import ClanMemberDFDAO
-from entity import ClanMember, ClanMemberRankEnum
+from entity import ClanMember, ClanMemberRank
 
 class ClanMemberService:
     
@@ -13,10 +13,10 @@ class ClanMemberService:
     def add_member(self,
                    name: str,
                    joined_date: Optional[int] = None,
-                   rank: Optional[ClanMemberRankEnum] = None,
+                   rank: Optional[ClanMemberRank] = None,
                    total_xp: Optional[int] = None) -> bool:
         clan_member = ClanMember(name, joined_date or datetime.now().toordinal())
-        clan_member.rank = rank or ClanMemberRankEnum.RANK_1.value
+        clan_member.rank = rank or ClanMemberRank.RANK_1
         clan_member.last_rank_date = datetime.now().toordinal()
         clan_member.total_xp = total_xp or 0
         return self._clan_member_dao.add(clan_member)
@@ -24,7 +24,7 @@ class ClanMemberService:
     def update_member(self,
                       name: str,
                       joined_date: Optional[int] = None,
-                      rank: Optional[ClanMemberRankEnum] = None,
+                      rank: Optional[ClanMemberRank] = None,
                       total_xp: Optional[int] = None) -> bool:
         
         clan_member = self.get_member(name)

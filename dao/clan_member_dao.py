@@ -3,13 +3,13 @@ from datetime import datetime
 
 from dao import IDao
 from db import DatabaseColumn, DatabaseRow, DataFrameDatabase, IDatabaseColumns
-from entity import ClanMember, ClanMemberRankEnum
+from entity import ClanMember, ClanMemberRank
 
 
 class ClanMemberFields(IDatabaseColumns):
     MEMBER = DatabaseColumn("member", "N/A", 'string')
     JOIN_DATE = DatabaseColumn("joined_date", datetime.min.toordinal(), 'Int64')
-    RANK = DatabaseColumn("rank", ClanMemberRankEnum.RANK_INVALID, "category", categories=ClanMemberRankEnum.values())
+    RANK = DatabaseColumn("rank", ClanMemberRank.RANK_INVALID, "category", categories=ClanMemberRank.values())
     TOTAL_XP = DatabaseColumn("total_xp", -1, "Int64")
     LAST_RANK_DATE = DatabaseColumn("last_rank_date", datetime.min.toordinal(), "Int64")
     

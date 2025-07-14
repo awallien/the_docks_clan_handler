@@ -1,7 +1,7 @@
 
 from typing import Callable, List, Any, Union
 from abc import ABCMeta, abstractmethod
-from enum import Enum, EnumMeta
+from meta import AutoConstantsMeta
 
 class DatabaseColumn:
     """Database Column containing the name of the column and default value"""
@@ -42,8 +42,6 @@ class DatabaseColumn:
         val = ''
         if self.dtype == "string":
             val = f"'{cmp_val}'"
-        elif self.dtype == "datatime64[ns]":
-            val = f""
         return f"({self.name} {op} {val})"
     
     def __eq__(self, value) -> bool:
@@ -62,23 +60,16 @@ class DatabaseColumn:
     def __repr__(self):
         return f"DatabaseColumn(name={self.name}, default={self.default}, dtype={self.dtype}, categories={self.categories})"
 
-
-class IDatabaseColumnsMeta(ABCMeta, EnumMeta):
-    """Metaclass combining ABCMeta and EnumMeta."""
+class IDatabaseColumnsMeta(ABCMeta, AutoConstantsMeta):
     pass
 
-class IDatabaseColumns(Enum, metaclass=IDatabaseColumnsMeta):
+class IDatabaseColumns(metaclass=IDatabaseColumnsMeta):
     """Interface for columns enumeration class."""
-
-    @classmethod
-    def members(cls) -> List[Any]:
-        """Return all enum members."""
-        return list(cls.__members__.keys())
 
     @classmethod
     def values(cls) -> List['DatabaseColumn']:
         """Return list of associated DatabaseColumn values."""
-        return [field.value for field in cls]
+        return cls.__constants__
 
     @classmethod
     @abstractmethod

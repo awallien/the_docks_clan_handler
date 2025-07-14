@@ -1,9 +1,7 @@
-from enum import UNIQUE, StrEnum, verify
 from typing import List, Self
+from meta import AutoConstantsMeta
 
-
-@verify(UNIQUE)
-class ClanMemberRankEnum(StrEnum):
+class ClanMemberRank(metaclass=AutoConstantsMeta):
     # INVALID_RANK
     RANK_INVALID = '0'
 
@@ -27,29 +25,25 @@ class ClanMemberRankEnum(StrEnum):
     RANK_A = 'A'; RANK_D = 'D'; RANK_O = 'O'
 
     @classmethod
-    def members(cls) -> List[Self]:
-        return list(cls)
-    
-    @classmethod
     def values(cls) -> List[str]:
-        return list(member.value for member in cls)
+        return cls.__constants__
 
     @classmethod
     def activeness_ranks(cls) -> List[Self]:
-        return cls.members()[1:5]
+        return cls.__constants__[1:5]
     
     @classmethod
     def achievement_ranks(cls) -> List[Self]:
-        return cls.members()[5:16]
+        return cls.__constants__[5:16]
     
     @classmethod
     def honorable_ranks_non_challenged(cls) -> List[Self]:
-        return cls.members()[16:21]
+        return cls.__constants__[16:21]
     
     @classmethod
     def honorable_ranks_challenged(cls) -> List[Self]:
-        return cls.members()[22:25]
+        return cls.__constants__[22:25]
     
     @classmethod
     def administrative_ranks(cls) -> List[Self]:
-        return cls.members()[26:29]
+        return cls.__constants__[26:29]

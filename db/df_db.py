@@ -2,6 +2,8 @@ from typing import Callable, Optional, List, Dict, Self, Tuple, Any, Union
 from pyarrow import parquet as pq
 import pandas as pd 
 from .icolumns import IDatabaseColumns, DatabaseColumn
+from threading import Lock
+from functools import wraps
 
 
 class DatabaseRow:
@@ -28,6 +30,15 @@ class DatabaseRow:
         return str(self)
 
 
+def db_lock(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if not hasattr(self, "_lock"):
+            self._lock = Lock()
+        with self._lock:
+            return func(self, *args, **kwargs)
+    return wrapper
+
 class DataFrameDatabase:
     """Database class, where underlying data structure is pandas DataFrame"""
 
@@ -44,6 +55,7 @@ class DataFrameDatabase:
         
         self._db = self._create_table()
 
+    @db_lock
     def add_row(self, obj: DatabaseRow) -> bool:
         """Add a row to the DataFrame"""
         assert self._db is not None, "Database should NOT be None"
@@ -73,6 +85,7 @@ class DataFrameDatabase:
 
         return True
 
+    @db_lock
     def update_row(self, obj: DatabaseRow) -> bool:
         """
         Update the values of a row in the database using the primary values from the given object.
@@ -108,6 +121,7 @@ class DataFrameDatabase:
 
         return True
 
+    @db_lock
     def get_row(self, obj: DatabaseRow) -> Optional[DatabaseRow]:
         """Get a row in a DataFrame and write it into a DatabaseRow"""
         assert self._db is not None, "Database is None"
@@ -135,6 +149,7 @@ class DataFrameDatabase:
         
         return row
 
+    @db_lock
     def delete_row(self, obj: DatabaseColumn) -> bool:
         """Delete row in DataFrame based on primary key values in obj"""
         assert self._db is not None, "Database is None"
@@ -162,6 +177,7 @@ class DataFrameDatabase:
 
         return True
     
+    @db_lock
     def dump(self, filter_expr: Optional[str]=None) -> List[DatabaseRow]:
         """Dump rows from the DataFrame with optional filter expression"""
         assert self._db is not None, "Database is None"
