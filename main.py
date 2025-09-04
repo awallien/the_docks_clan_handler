@@ -12,11 +12,12 @@ class DocksClanApp:
     def __init__(self):
         self._cli_runner = DocksClanCLI()
     
-    async def _run_cli(self):
+    async def _run_cli(self, **kwargs):
         """
         Init and run the CLI for the Docks Clan app.
         """
-        self._cli_runner.run()
+        commands = kwargs.get("commands", [])
+        self._cli_runner.run(commands)
 
     async def _run_bot(self, **kwargs):
         pass
@@ -29,7 +30,7 @@ class DocksClanApp:
         tasks = []
 
         if "cli" in flags:
-            tasks.append(asyncio.create_task(self._run_cli()))
+            tasks.append(asyncio.create_task(self._run_cli(**kwargs)))
         
         if "bot" in flags:
             tasks.append(asyncio.create_task(self._run_bot(**kwargs)))
@@ -49,8 +50,10 @@ if __name__ == "__main__":
     parser.add_argument('--dev', action='store_true', help='Run bot in development mode')
     parser.add_argument('--prod', action='store_true', help='Run bot in production mode')
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
+    parser.add_argument('--cli_commands_file', type=argparse.FileType('r'), help="Path to a file containing commands, one per line")
 
     args = parser.parse_args()
+    kwargs = dict()
 
     if not (args.cli or args.bot):
         parser.error("At least one of --cli or --bot must be specified.")
@@ -60,6 +63,9 @@ if __name__ == "__main__":
         flags.append("cli")
     if args.bot:
         flags.append("bot")
+
+    if args.commands_file:
+        kwargs["commands"] = [line.strip() for line in args.commands_file if line.strip()]
 
     bot_mode = ""
     if args.bot:
@@ -74,7 +80,6 @@ if __name__ == "__main__":
             print("No bot mode specified, defaulting to 'development' mode.")
             bot_mode = "d"
 
-    kwargs = dict()
     if bot_mode:
         kwargs["bot_mode"] = bot_mode
     kwargs["debug"] = args.debug

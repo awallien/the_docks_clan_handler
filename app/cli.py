@@ -20,45 +20,50 @@ class DocksClanCLI:
         if self._parser is not None:
             print(self._parser.get_cmds())
 
-    def run(self):
+    def _process_input(self, resp:str):
+        fields = shlex.split(resp)
+        match fields[0]:
+            case "load":
+                if not len(fields) == 2:
+                    self._print_cli_cmds()
+                    return
+                match fields[1]:
+                    case "?":
+                        print("Available command sets:")
+                        print("\n".join(f"  - {f}" for f in YamlCommandParser.get_yaml_files()))
+                        return
+                    case _ if not YamlCommandParser.yaml_file_exists(fields[1]):
+                        print("Command set not found.", file=sys.stderr)
+                        return
+                self._parser = YamlCommandParser().parse(fields[1])
+            case "quit"|"exit":
+                self._prompt_quit = True
+            case "?":
+                self._print_cli_cmds()
+            case "config"|"show":
+                if not self._parser:
+                    print("Command set is not loaded. Please \"load\" a proper command set.", file=sys.stderr)
+                    return
+                status = self._parser.process(resp)
+                if not status:
+                    print("Unable to process command.", file=sys.stderr)
+                else: 
+                    print(status)
+            case _ if fields[0]:
+                print("Invalid command")
+
+    def run(self, commands=[]):
         print(self._banner)
         try:
+            for command in commands:
+                self._process_input(command)
             while not self._prompt_quit:
                 resp = input(f"{self._prompt_chr}  ").strip()
 
                 if not resp:
                     continue
 
-                fields = shlex.split(resp)
-                match fields[0]:
-                    case "":
-                        continue
-                    case "load":
-                        if not len(fields) == 2:
-                            self._print_cli_cmds()
-                            continue
-                        match fields[1]:
-                            case "?":
-                                print("Available command sets:")
-                                print("\n".join(f"  - {f}" for f in YamlCommandParser.get_yaml_files()))
-                                continue
-                            case _ if not YamlCommandParser.yaml_file_exists(fields[1]):
-                                print("Command set not found.", file=sys.stderr)
-                                continue
-                        self._parser = YamlCommandParser().parse(fields[1])
-                    case "quit"|"exit":
-                        self._prompt_quit = True
-                    case "?":
-                        self._print_cli_cmds()
-                    case "config"|"show":
-                        if not self._parser:
-                            print("Command set is not loaded. Please \"load\" a proper command set.", file=sys.stderr)
-                            continue
-                        status = self._parser.process(resp)
-                        if not status:
-                            print("Something went wrong", file=sys.stderr)
-                        else: 
-                            print(status)
+                self._process_input(resp)
         except EOFError:
             print("Exiting CLI...")
         except FileNotFoundError as fnfe:
