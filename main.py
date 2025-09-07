@@ -50,7 +50,7 @@ if __name__ == "__main__":
     parser.add_argument('--dev', action='store_true', help='Run bot in development mode')
     parser.add_argument('--prod', action='store_true', help='Run bot in production mode')
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
-    parser.add_argument('--cli_commands_file', type=argparse.FileType('r'), help="Path to a file containing commands, one per line")
+    parser.add_argument('--cmds_file', type=argparse.FileType('r'), help="Path to a file containing commands, one per line")
 
     args = parser.parse_args()
     kwargs = dict()
@@ -64,8 +64,8 @@ if __name__ == "__main__":
     if args.bot:
         flags.append("bot")
 
-    if args.commands_file:
-        kwargs["commands"] = [line.strip() for line in args.commands_file if line.strip()]
+    if args.cmds_file:
+        kwargs["commands"] = [line.strip() for line in args.cmds_file if line.strip()]
 
     bot_mode = ""
     if args.bot:

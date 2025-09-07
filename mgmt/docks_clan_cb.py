@@ -1,11 +1,12 @@
 
-from service import ClanMemberService
+from typing import Optional
+from service import ClanMemberService, rank_service
 from logging import DEBUG, ERROR
 from db import DataFrameDatabaseDirCache, DataFrameDatabase
 from dao import ClanMemberFields
 from util import set_logger_level, Hiscore
 from .mgmt_abc import ICallbackMapper
-from .mgmt_util import get_leaf_values
+from .mgmt_util import _convert_from_ordinal, get_leaf_values, print_hiscore_stats
 
 
 class _DocksClanCommandsCallback(ICallbackMapper):
@@ -22,7 +23,7 @@ class _DocksClanCommandsCallback(ICallbackMapper):
                                      cols = ClanMemberFields.values(),
                                      prim_cols_sort_fn=ClanMemberFields.primary_sort)
         self._clan_member_service = ClanMemberService(self._db)
-        return True
+        return "New DB is created."
 
     def save_database(self, fname):
         if not self._db or not fname:
@@ -59,35 +60,82 @@ class _DocksClanCommandsCallback(ICallbackMapper):
         
         return self._clan_member_service.add_member(name, joined_date)
 
-    def update_member(self, name, joined_date, rank, total_xp):
+    def update_member(self, name, joined_date=0, rank=0, total_xp=0):
         if not self._db or not self._clan_member_service:
             return False
-        
-        return self._clan_member_service.update_member(name, joined_date, rank, total_xp)
+
+        clan_member = self._clan_member_service.get_member(name)
+        if not clan_member:
+            return False
+
+        cm_rank = clan_member.rank
+        cm_joined_date = clan_member.joined_date
+        cm_total_xp = clan_member.total_xp
+
+        hiscore = self._get_hiscore(name)
+
+        # If any of joined_date, rank, or total_xp are missing → perform a full update
+        if not all([joined_date, rank, total_xp]):
+            new_rank = rank_service.get_next_rank(hiscore, cm_rank, cm_joined_date)
+            new_total_xp = hiscore.total_xp if hiscore else 0
+            return self._clan_member_service.update_member(name, cm_joined_date, new_rank, new_total_xp)
+
+        # Partial update: use provided values or fall back to current ones
+        return self._clan_member_service.update_member(
+            name,
+            joined_date or cm_joined_date,
+            rank or cm_rank,
+            total_xp or cm_total_xp
+        )
 
     def delete_member(self, name):
         if not self._db or not self._clan_member_service:
             return False
-        
         return self._clan_member_service.delete_member(name)
     
     def get_member(self, name, show_stat):
         if not self._db or not self._clan_member_service:
             return False
         
-        clan_info = self._clan_member_service.get_member(name)
-        if not clan_info:
+        member = self._clan_member_service.get_member(name)
+        if not member:
             return False
-        
-        return Hiscore(name) if show_stat else "N/A"
+
+        joined_date = _convert_from_ordinal(member.joined_date)
+        last_rank_date = _convert_from_ordinal(member.last_rank_date)
+        print(f"Name            Joined Date    Rank     Total XP     Last Rank Date\n"
+               "----            -----------    ----     --------     --------------\n"
+               f"{member.member:<15} {joined_date:<14} {member.rank:<8} {member.total_xp:<12} {last_rank_date}\n")
+
+        if show_stat:
+            print_hiscore_stats(name)         
+
+        return True
 
     def get_members(self, query):
         if not self._db or not self._clan_member_service:
             return False
-        return self._clan_member_service.get_members(query)
+        
+        members = self._clan_member_service.get_members(query)
+        print(f"Name            Joined Date    Rank     Total XP     Last Rank Date\n"
+               "----            -----------    ----     --------     --------------")
+        for member in members:
+            joined_date = _convert_from_ordinal(member.joined_date)
+            last_rank_date = _convert_from_ordinal(member.last_rank_date)
+            print(f"{member.member:<15} {joined_date:<15} {member.rank:<8} {member.total_xp:<12} {last_rank_date}")
+
+        return True
 
     def show_database_cache(self):
         return self._cache.cache_list()
+    
+    @staticmethod
+    def _get_hiscore(name: str) -> Optional[Hiscore]:
+        try:
+            return Hiscore(name)
+        except Exception as e:
+            print(e)
+        return None
 
 docks_clan_cb = _DocksClanCommandsCallback()
 

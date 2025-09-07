@@ -188,7 +188,7 @@ class DataFrameDatabase:
         filtered_df = self._db
         if filter_expr:
             filtered_df = self._db.query(filter_expr)
-        
+
         # Convert filtered rows into list of DatabaseRow
         records = filtered_df.to_dict(orient="records")
         rows = []

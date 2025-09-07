@@ -3,7 +3,7 @@ from datetime import datetime
 from util.osrs_api import Hiscore, SKILLS as osrs_api_SKILLS
 from entity import ClanMemberRank
     
-class _RankService:
+class RankService:
 
     MELEE_CMB_SKILLS = {"attack", "strength", "defence"}
     CMB_SKILLS = MELEE_CMB_SKILLS | {"ranged", "magic"}
@@ -24,8 +24,8 @@ class _RankService:
         if hiscore_data is None:
             return ClanMemberRank.RANK_1
         
-        avg_cmb_lvl = cls._get_cmb_skills_avg(hiscore_data)
-        avg_non_cmb_lvl = cls._get_non_cmb_skills_avg(hiscore_data)
+        avg_cmb_lvl = cls.get_cmb_skills_avg(hiscore_data)
+        avg_non_cmb_lvl = cls.get_non_cmb_skills_avg(hiscore_data)
 
         if ((avg_cmb_lvl >= cls.PROMO_RANK_2_REQ_AVG) or
             (avg_non_cmb_lvl >= cls.PROMO_RANK_2_REQ_AVG)):
@@ -77,8 +77,8 @@ class _RankService:
         if not hiscore_data:
             return ClanMemberRank.RANK_5
         
-        cmb_avg = cls._get_cmb_skills_avg(hiscore_data)
-        non_cmb_avg = cls._get_non_cmb_skills_avg(hiscore_data)
+        cmb_avg = cls.get_cmb_skills_avg(hiscore_data)
+        non_cmb_avg = cls.get_non_cmb_skills_avg(hiscore_data)
 
         def chk_avg_range_or(left_val, right_val):
             max_avg = max(cmb_avg, non_cmb_avg)
@@ -92,11 +92,11 @@ class _RankService:
                     (left_val <= non_cmb_avg <= right_val))
         
         def chk_achieve_rank_14(left_val, right_val):
-            non_cmb_avg = cls._get_non_cmb_skills_avg(hiscore_data, n_highest=6)
+            non_cmb_avg = cls.get_non_cmb_skills_avg(hiscore_data, n_highest=6)
             return chk_avg_range_and(left_val, right_val, non_cmb_avg)
         
         def chk_achieve_rank_15(left_val, right_val):
-            non_cmb_avg = cls._get_non_cmb_skills_avg(hiscore_data, n_highest=len(cls.NON_CMB_SKILLS))
+            non_cmb_avg = cls.get_non_cmb_skills_avg(hiscore_data, n_highest=len(cls.NON_CMB_SKILLS))
             return chk_avg_range_and(left_val, right_val, non_cmb_avg)
 
         achieve_rank_reqs = \
@@ -119,7 +119,7 @@ class _RankService:
         return ClanMemberRank.RANK_5
 
     @classmethod
-    def _get_cmb_skills_avg(cls, hiscore_data: Hiscore) -> int:
+    def get_cmb_skills_avg(cls, hiscore_data: Hiscore) -> int:
         """Get average combat skill levels from [max(attack, strength, defence), ranged, level]"""
         skills = hiscore_data.skills
         
@@ -135,7 +135,7 @@ class _RankService:
         return int(avg_cmb_lvl)
 
     @classmethod
-    def _get_non_cmb_skills_avg(cls, hiscore_data: Hiscore, n_highest=3) -> int:
+    def get_non_cmb_skills_avg(cls, hiscore_data: Hiscore, n_highest=3) -> int:
         """Get average of non-combat skill levels of n_highest skills"""
         skills = hiscore_data.skills
         skill_lvls = [skills.get(skill) for skill in cls.NON_CMB_SKILLS]
@@ -150,4 +150,4 @@ class _RankService:
     def _get_avg(*args) -> float:
         return sum(args) / len(args)
 
-rank_service: _RankService = _RankService()
+rank_service: RankService = RankService()

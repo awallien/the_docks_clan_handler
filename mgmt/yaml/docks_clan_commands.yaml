@@ -133,7 +133,7 @@ docks_clan_commands:
       rank:
         _type_: "rank"
       total_xp:
-        _type_: "total_xp"
+        _type_: "uint"
       last_rank_date:
         _desc_: "Last rank date"
         _type_: "date"

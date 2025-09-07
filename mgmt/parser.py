@@ -22,6 +22,16 @@ base_types: Set[str] = {
     "enum", "bool", "empty"
 }
 
+class GetCommands:
+    def __init__(self, commands):
+        self._commands = commands
+
+    def get_cmds(self):
+        max_len = max((len(name) for name in self._commands), default=0)
+        return "\n".join(
+            f"{TAB(1)}{name.ljust(max_len)} - {block._desc}" for name, block in self._commands.items()
+        )
+
 
 class EmptyType(INodeType):
     def __init__(self, op, value):
@@ -42,10 +52,9 @@ class BoolType(INodeType):
     def parse(cls, op: str, value: str, **kwargs) -> Union[Self, None]:
         if (
             cls._raise_unsupported_ops(op, ["="])
-            and isinstance(value, str)
             and (val := value.lower()) in ["true", "false"]
         ):
-            return cls(op, bool(val))
+            return cls(op, True if val == "true" else False)
         raise ValueError(f"BoolNode({op}, {value}) should only have '=' operation with 'true' or 'false' value")
 
 
@@ -79,7 +88,10 @@ class DateType(INodeType):
     @classmethod
     def parse(cls, op: str, value: str, **kwargs) -> Union[Self, None]:
         try:
-            dt = datetime.strptime(value, "%Y-%m-%d")
+            if value == 'now':
+                dt = datetime(*(datetime.now().timetuple()[:3]))
+            else:
+                dt = datetime.strptime(value, "%Y-%m-%d")
         except ValueError:
             raise ValueError(f"DateNode({op}, {value}) '{value}' is not a valid datetime string")
 
@@ -238,7 +250,7 @@ class YamlTypeDefs:
         
         return def_type, sub_type
 
-class YamlBlock:
+class YamlBlock(GetCommands):
 
     def __init__(
         self,
@@ -251,6 +263,7 @@ class YamlBlock:
         self._desc: str = desc
         self._sub_blocks: Dict[str, Union[YamlBlock, YamlLeafNode]] = sub_blocks
         self._cb_fn: Optional[Callable] = cb_fn
+        super().__init__(self._sub_blocks)
 
     @classmethod
     def parse_yaml(
@@ -278,12 +291,6 @@ class YamlBlock:
                     case _:
                         blocks[values_name] = YamlBlock.parse_yaml({values_name:values_value}, typedefs, mapper_cb)
             return cls(block_name, desc, blocks, cb_fn)
-
-    def get_cmds(self) -> str:
-        max_len = max((len(name) for name in self._sub_blocks), default=0)
-        return "\n".join(
-            f"{TAB(1)}{name.ljust(max_len)} - {block._desc}" for name, block in self._sub_blocks.items()
-        )
     
     def process(self, cmd_lst: List[str]) -> bool:
         """
@@ -328,10 +335,11 @@ class YamlBlock:
 
         return result
 
-class YamlConfigs:
+class YamlConfigs(GetCommands):
 
     def __init__(self, blocks):
         self._blocks: Dict[str, YamlBlock] = blocks
+        super().__init__(self._blocks)
 
     @classmethod
     def parse_yaml(
@@ -348,12 +356,6 @@ class YamlConfigs:
             blocks[name] = YamlBlock.parse_yaml({name: values}, type_defs, mapper_cb)
         return cls(blocks)
 
-    def get_cmds(self):
-        max_len = max((len(name) for name in self._blocks), default=0)
-        return "\n".join(
-            f"{TAB(1)}{name.ljust(max_len)} - {block._desc}" for name, block in self._blocks.items()
-        )
-
     def process(self, cmd_list: List[str]) -> bool:
         if not cmd_list:
             return False
@@ -367,10 +369,11 @@ class YamlConfigs:
                 raise ValueError(f"Invalid command, {cmd_list[0]} does not exist.")
 
 
-class YamlOpers:
+class YamlOpers(GetCommands):
     
     def __init__(self, blocks):
         self._blocks : Dict[str, YamlBlock] = blocks
+        super().__init__(self._blocks)
 
     @classmethod
     def parse_yaml(
@@ -386,12 +389,6 @@ class YamlOpers:
                 raise TypeError(f"Duplicate oper command found: {name}")
             blocks[name] = YamlBlock.parse_yaml({name: values}, type_defs, mapper_cb)
         return cls(blocks)
-    
-    def get_cmds(self):
-        max_len = max((len(name) for name in self._blocks), default=0)
-        return "\n".join(
-            f"{TAB(1)}{name.ljust(max_len)} - {block._desc}" for name, block in self._blocks.items()
-        )
             
     def process(self, cmd_list: List[str]) -> bool:
         if not cmd_list:
