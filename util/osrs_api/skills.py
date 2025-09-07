@@ -42,6 +42,9 @@ class Skill:
     @xp.setter
     def xp(self, value):
         self._xp = value
+
+    def to_json(self):
+        return {'name': self.name, 'level': self.level, 'rank': self.rank, 'xp': self.xp}
     
     def __str__(self):
         return f"Skill({[str(v) for v in self.__dict__.values()]})"
@@ -189,6 +192,7 @@ class Skills:
     @property
     def construction(self):
         return self._construction
+
 
     
     def __str__(self):

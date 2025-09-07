@@ -1,5 +1,6 @@
 import sys
 import requests
+from collections import OrderedDict
 from enum import Enum, verify, UNIQUE
 from http import HTTPStatus
 
@@ -102,5 +103,18 @@ class Hiscore:
     def skills(self) -> Skills:
         return self._skills
     
+    def to_dict(self):
+        return \
+        OrderedDict({
+            "username": self.username, 
+            "account_type": self.account_type.name, 
+            "total_rank": self.total_rank,
+            "total_level": self.total_level,
+            "total_xp": self.total_xp,
+            "skills": [self.skills.get(skill).to_json() for skill in SKILLS],
+            "activities": [self.activities.get(activity).to_json() for activity in ACTIVITIES],
+            "bosses": [self.bosses.get(boss).to_json() for boss in BOSSES]
+        })
+
     def __str__(self):
         return f"HiScore({self.username}, {self.account_type}, {self.total_rank}, {self.total_level}, {self.total_xp})"

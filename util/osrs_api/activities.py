@@ -33,6 +33,9 @@ class Activity:
     @rank.setter
     def rank(self, value):
         self._rank = value
+
+    def to_json(self):
+        return {'name': self.name, 'score': self.score, 'rank': self.rank}
     
     def __str__(self):
         return f"Activity({[str(v) for v in self.__dict__.values()]})"
@@ -156,6 +159,7 @@ class Activities:
     @property
     def collections_logged(self):
         return self._collections_logged
+
 
     
     def __str__(self):

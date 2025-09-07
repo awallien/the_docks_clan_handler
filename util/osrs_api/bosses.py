@@ -33,6 +33,9 @@ class Boss:
     @rank.setter
     def rank(self, value):
         self._rank = value
+
+    def to_json(self):
+        return {'name': self.name, 'score': self.score, 'rank': self.rank}
     
     def __str__(self):
         return f"Boss({[str(v) for v in self.__dict__.values()]})"
@@ -59,6 +62,7 @@ BOSSES = [
 	"Dagannoth Rex",
 	"Dagannoth Supreme",
 	"Deranged Archaeologist",
+	"Doom of Mokhaiotl",
 	"Duke Sucellus",
 	"General Graardor",
 	"Giant Mole",
@@ -129,6 +133,7 @@ class Bosses:
         self._dagannoth_rex = Boss("Dagannoth Rex", -1, -1)
         self._dagannoth_supreme = Boss("Dagannoth Supreme", -1, -1)
         self._deranged_archaeologist = Boss("Deranged Archaeologist", -1, -1)
+        self._doom_of_mokhaiotl = Boss("Doom of Mokhaiotl", -1, -1)
         self._duke_sucellus = Boss("Duke Sucellus", -1, -1)
         self._general_graardor = Boss("General Graardor", -1, -1)
         self._giant_mole = Boss("Giant Mole", -1, -1)
@@ -258,6 +263,10 @@ class Bosses:
     @property
     def deranged_archaeologist(self):
         return self._deranged_archaeologist
+
+    @property
+    def doom_of_mokhaiotl(self):
+        return self._doom_of_mokhaiotl
 
     @property
     def duke_sucellus(self):
@@ -438,6 +447,7 @@ class Bosses:
     @property
     def zulrah(self):
         return self._zulrah
+
 
     
     def __str__(self):

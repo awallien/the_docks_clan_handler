@@ -52,7 +52,8 @@ def make_class(class_name,
                getters,
                setters=None,
                set_init_params=False,
-               coll_get_fn=None):
+               coll_get_fn=None,
+               set_to_json_fn=False):
     init_params_str = ''
     self_init_vars = ''
     if set_init_params:
@@ -61,7 +62,11 @@ def make_class(class_name,
     self_init_vars = make_init_vars(init_params, init_val_vars)
     getters_str = '\n'.join(getters) if getters else ''
     setters_str = '\n'.join(setters) if setters else ''
-
+    to_json_str = ''
+    
+    if set_to_json_fn:
+        to_json_fmt = ", ".join([f"'{param}': self.{param}" for param in init_params])
+        to_json_str = f"{' '*4}def to_json(self):\n{' '*8}return {{{to_json_fmt}}}\n"
     return \
 f"""
 class {class_name}:
@@ -69,7 +74,8 @@ class {class_name}:
         {self_init_vars}
 
 {getters_str}
-{setters_str}    
+{setters_str}
+{to_json_str}    
     def __str__(self):
         return f\"{class_name}({{[str(v) for v in self.__dict__.values()]}})\"
 
@@ -105,7 +111,7 @@ BOSSES = [
     "Chaos Elemental", "Chaos Fanatic", "Commander Zilyana",
     "Corporeal Beast", "Crazy Archaeologist",
     "Dagannoth Prime", "Dagannoth Rex", "Dagannoth Supreme",
-    "Deranged Archaeologist", "Duke Sucellus",
+    "Deranged Archaeologist", "Doom of Mokhaiotl", "Duke Sucellus",
     "General Graardor", "Giant Mole",
     "Grotesque Guardians", "Hespori",
     "Kalphite Queen", "King Black Dragon", "Kraken",
@@ -139,7 +145,7 @@ generated_file_names = {
             "mdata_base_name": "Skill",
             "vars":["name", "level", "rank", "xp"],
             "setters": [False, True, True, True],
-            "init_call_fn": lambda name : f"Skill(\"{name}\", 1, -1, -1)"
+            "init_call_fn": lambda name : f"Skill(\"{name}\", 1, -1, -1)",
         },
         "mdata_init_py": {
             "import": "Skills, Skill, SKILLS"
@@ -204,9 +210,9 @@ def generate_hiscore_mdata_files():
 
                 # Bring it all together into one file
                 pyf.write(header)
-                pyf.write(make_class(mdata_base_name, mdata_base_vars, mdata_base_vars, base_getters, base_setters, set_init_params=True))
+                pyf.write(make_class(mdata_base_name, mdata_base_vars, mdata_base_vars, base_getters, base_setters, set_init_params=True, set_to_json_fn=True))
                 pyf.write(generate_mdata_list(name.upper(), mdata_list))
-                pyf.write(make_class(name.capitalize(), coll_vars, coll_vars_vals, coll_getters,coll_get_fn=get_fn))
+                pyf.write(make_class(name.capitalize(), coll_vars, coll_vars_vals, coll_getters, coll_get_fn=get_fn))
 
             if mdata_init_import not in init_contents:
                 with open(os.path.join(current_dir, "__init__.py"), "a") as init_fp_2:
