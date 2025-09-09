@@ -1,8 +1,10 @@
-.env
+.env.development
+.env.production
+
 cache_db.csv
 __pycache__
-activities.py
-skills.py
-bosses.py
+*/util/osrs_api/*activities.py
+*/util/osrs_api/*skills.py
+*/util/osrs_api/*bosses.py
 logs/
 db/cache/
