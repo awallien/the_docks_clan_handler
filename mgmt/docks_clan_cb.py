@@ -4,7 +4,7 @@ from service import ClanMemberService, rank_service
 from logging import DEBUG, ERROR
 from db import DataFrameDatabaseDirCache, DataFrameDatabase
 from dao import ClanMemberFields
-from util import set_logger_level, Hiscore
+from util import Hiscore
 from .mgmt_abc import ICallbackMapper
 from .mgmt_util import _convert_from_ordinal, get_leaf_values, print_hiscore_stats
 
@@ -182,10 +182,7 @@ def debug_cb(**kwargs):
     values = get_leaf_values(["name", "enable"], kwargs).results
     name = values.get("name", "")
     enable = values.get("enable", False)
-    if enable:
-        return set_logger_level(DEBUG, name)
-    else:
-        return set_logger_level(ERROR, name)
+    return True
 
 def show_clan_member_cb(**kwargs):
     values = get_leaf_values(["name", "stat"], kwargs).results
