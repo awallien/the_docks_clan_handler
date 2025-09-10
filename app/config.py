@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=env_file, extra="ignore")
 
     DISCORD_TOKEN: str
-    ALLOWED_ROLES: str
+    ALLOWED_ROLE: str
     BOT_OWNER: str
 
     DISCORD_GUILD: str
@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     FORUM_CHANNEL: str
     VOICE_CHANNEL: str
     DEV_CHANNEL: str
+    WELCOME_CHANNEL: str
 
     DROPS_WEBHOOK: str
     DROPS_CHANNEL: str
