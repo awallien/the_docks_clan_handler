@@ -1,32 +1,30 @@
-from discord import utils as dutils
-from discord_bot.discord_bot_util import err_embed, info_embed
-from util import logger
+import discord
+from discord_bot.discord_bot_util import DiscordBotUtils
 
 
-DOCS = [
-    "\"The Docks\" Ranking System and Permission Settings",
-    "How to Set up Drop Notifications",
-    "How to Set up Deaths Notification",
-    "How to Set up OBS to Record Your Screen",
-    "The Docks Clan Bot Help Desk"
-]
+async def discord_bot_command_docs(BOT, interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="Docs Hub",
+        description="Dock here for guides, plugins, and support — everything you need in one place.",
+        color=discord.Color.blue(),
+    )
 
+    embed.add_field(
+        name="📊 **The Docks Ranking System & Permissions**",
+        value="If you are a member of the clan, [learn more](https://discord.com/channels/773805654728900611/1215130179299442739) about the roles, ranks, and permissions work inside The Docks.",
+        inline=False
+    )
+    embed.add_field(
+        name="🔔 **Setting up Dink Plugin**",
+        value="[Read the setup guide](https://discord.com/channels/773805654728900611/1358405081640341627) to set up drops, deaths, and other notifications.",
+        inline=False
+    )
+    embed.add_field(
+        name="🛠️ **The Docks Clan Bot Help Desk**",
+        value="[Visit the help desk](https://discord.com/channels/773805654728900611/1254717570288717835) for FAQs and support for the Docks Clan Bot",
+        inline=False
+    )
 
-async def cb_docs(BOT, ctx):
-    docs_msg = ""
+    embed.set_footer(text="The Docks Clan Bot • Welcome aboard!")
     
-    for doc in DOCS:
-        try:
-            thr = dutils.get(BOT.forum_channel.threads, name=doc)
-            docs_msg += f"**{doc}**: {thr.mention}\n"
-        except:
-            logger.err(f"{doc} does not exist")
-    
-    if not docs_msg:
-        docs_msg = "There seems to be no docs here..."
-        embed = err_embed(docs_msg, "Interesting...")
-    else:
-        docs_msg = "Here is a list of relevant documents/threads: \n\n" + docs_msg
-        embed = info_embed(docs_msg, "The Docks Clan's Docs")
-    
-    await ctx.send(embed=embed, ephemeral=True)
+    await interaction.response.send_message(embed=embed, ephemeral=True)

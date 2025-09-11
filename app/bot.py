@@ -5,7 +5,7 @@ import discord
 from discord import Intents, utils as discord_utils, ClientException, app_commands, Interaction
 from pathlib import Path
 
-from discord_bot import cb_docs, DiscordBotUtils
+from discord_bot import *
 from discord.ext import commands
 
 from .config import settings
@@ -17,22 +17,28 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
 
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         if isinstance(error, app_commands.MissingRole):
-            role = error.missing_role  # Get the missing role name
-            await interaction.response.send_message(
-                f"You don't have the required role: **{role}** to use this command!", 
-                ephemeral=True  # Sends the message only to the user
+            role = error.missing_role
+            cb = await interaction.response.send_message(
+                DiscordBotUtils.error_embed(
+                    f"You don't have the required role: **{role}** to use this command!",
+                    "Well... this is awkward."
+                ), 
+                ephemeral=True
             )
         else:
-            # Handle other errors or pass them up
-            await interaction.response.send_message(
-                f"An error occurred: {str(error)}", 
-                ephemeral=True
+            await self.bot.mod.send(
+                content=f"Error occurred, {interaction.user} executed {interaction.command} with error: {error}"
             )
 
     @app_commands.command(name="hello", description="test")
     @app_commands.checks.has_role(settings.ALLOWED_ROLE)
     async def _hello(self, interaction: Interaction):
         await interaction.response.send_message(f"Howdy, {interaction.user.display_name}", ephemeral=True)
+
+    @app_commands.command(name="docs", description="Shows guides, references, and useful docs for the server and clan.")
+    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    async def _docs(self, interaction: Interaction):
+        await discord_bot_command_docs(self.bot, interaction)
 
 class TheDocksDiscordBot(commands.Bot):
 

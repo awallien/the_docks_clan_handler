@@ -41,3 +41,23 @@ async def set_true_autocompletion(_, current):
         app_commands.Choice(name=choice, value=choice)
         for choice in ["True"] if current.lower() in choice.lower()
     ]
+
+
+class DiscordBotUtils:
+
+    @classmethod
+    def info_embed(cls, msg, title="Info"):
+        return Embed(
+            title=title,
+            description=msg,
+            color=Color.blue()
+        )
+
+    @classmethod
+    def error_embed(cls, msg, title="Error"):
+        return Embed(
+            title=title,
+            description=msg,
+            color=Color.dark_red()
+        )
+    
