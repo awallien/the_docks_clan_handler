@@ -2,43 +2,14 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 import discord
-from discord import Intents, utils as discord_utils, ClientException, app_commands, Interaction
+from discord import Intents, utils as discord_utils, ClientException
 from pathlib import Path
 
-from discord_bot import *
+from discord_bot import DiscordBotUtils as dbu
 from discord.ext import commands
 
 from .config import settings
-
-class DocksGroupCog(commands.GroupCog, name="docks"):
-    def __init__(self, bot: "TheDocksDiscordBot") -> None:
-        self.bot = bot
-        super().__init__()
-
-    async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
-        if isinstance(error, app_commands.MissingRole):
-            role = error.missing_role
-            cb = await interaction.response.send_message(
-                DiscordBotUtils.error_embed(
-                    f"You don't have the required role: **{role}** to use this command!",
-                    "Well... this is awkward."
-                ), 
-                ephemeral=True
-            )
-        else:
-            await self.bot.mod.send(
-                content=f"Error occurred, {interaction.user} executed {interaction.command} with error: {error}"
-            )
-
-    @app_commands.command(name="hello", description="test")
-    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
-    async def _hello(self, interaction: Interaction):
-        await interaction.response.send_message(f"Howdy, {interaction.user.display_name}", ephemeral=True)
-
-    @app_commands.command(name="docs", description="Shows guides, references, and useful docs for the server and clan.")
-    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
-    async def _docs(self, interaction: Interaction):
-        await discord_bot_command_docs(self.bot, interaction)
+from .bot_cog import DocksGroupCog
 
 class TheDocksDiscordBot(commands.Bot):
 
@@ -77,21 +48,21 @@ class TheDocksDiscordBot(commands.Bot):
                 raise ValueError(f"{name} returns None")
             return res
 
-        self.guild = _discord_get_or_fail(self.guilds, settings.DISCORD_GUILD)
+        self.guild: discord.Guild = _discord_get_or_fail(self.guilds, settings.DISCORD_GUILD)
         
-        self.mod = _discord_get_or_fail(self.guild.members, settings.BOT_OWNER)
-        self.allowed_role = _discord_get_or_fail(self.guild.roles, settings.ALLOWED_ROLE)
+        self.mod: discord.Member = _discord_get_or_fail(self.guild.members, settings.BOT_OWNER)
+        self.allowed_role: discord.Role = _discord_get_or_fail(self.guild.roles, settings.ALLOWED_ROLE)
         
-        self.drops_webhook = settings.DROPS_WEBHOOK
-        self.drops_channel = _discord_get_or_fail(self.guild.channels, settings.DROPS_CHANNEL)
-        self.clog_thread = _discord_get_or_fail(self.guild.threads, settings.CLOG_THREAD)
-        self.clue_thread = _discord_get_or_fail(self.guild.threads, settings.CLUE_THREAD)
+        self.drops_webhook: str = settings.DROPS_WEBHOOK
+        self.drops_channel: discord.TextChannel = _discord_get_or_fail(self.guild.channels, settings.DROPS_CHANNEL)
+        self.clog_thread: discord.Thread = _discord_get_or_fail(self.guild.threads, settings.CLOG_THREAD)
+        self.clue_thread: discord.Thread = _discord_get_or_fail(self.guild.threads, settings.CLUE_THREAD)
 
-        self.general_channel = _discord_get_or_fail(self.guild.channels, settings.GENERAL_CHANNEL)
-        self.forum_channel = _discord_get_or_fail(self.guild.channels, settings.FORUM_CHANNEL)
-        self.voice_channel = _discord_get_or_fail(self.guild.voice_channels, settings.VOICE_CHANNEL)
-        self.dev_channel = _discord_get_or_fail(self.guild.channels, settings.DEV_CHANNEL)
-        self.welcome_channel = _discord_get_or_fail(self.guild.channels, settings.WELCOME_CHANNEL)
+        self.general_channel: discord.TextChannel = _discord_get_or_fail(self.guild.channels, settings.GENERAL_CHANNEL)
+        self.forum_channel: discord.ForumChannel = _discord_get_or_fail(self.guild.channels, settings.FORUM_CHANNEL)
+        self.voice_channel: discord.VoiceChannel = _discord_get_or_fail(self.guild.voice_channels, settings.VOICE_CHANNEL)
+        self.dev_channel: discord.TextChannel = _discord_get_or_fail(self.guild.channels, settings.DEV_CHANNEL)
+        self.welcome_channel: discord.TextChannel = _discord_get_or_fail(self.guild.channels, settings.WELCOME_CHANNEL)
 
         print(f"guild({self.guild}), mod({self.mod}))")
 
@@ -116,7 +87,7 @@ class TheDocksDiscordBot(commands.Bot):
     async def on_member_join(self, member):
         if self.allowed_role in member.roles:
             await self.welcome_channel.send(
-                embed=DiscordBotUtils.info_embed(
+                embed=dbu.info_embed(
                     msg=(
                         f"Hey {member.mention}, welcome to the server! I'm **Docks**, here to help you get settled. "
                         "Take a look around, say hi to everyone, and don’t forget to grab some snacks at the snack table over there. "
@@ -130,7 +101,7 @@ class TheDocksDiscordBot(commands.Bot):
     async def on_command_error(self, ctx, exception):
         print(f"Exception({ctx.author.name},{type(exception)}:{exception})")
         if isinstance(exception, commands.MissingAnyRole):
-            message = await ctx.reply(embed=DiscordBotUtils.info_embed(f"Sorry, you must be a {self.allowed_role} in order to use my commands. " 
+            message = await ctx.reply(embed=dbu.info_embed(f"Sorry, you must be a {self.allowed_role} in order to use my commands. " 
                                       f"If you are a member, please reach out to {self.mod.display_name} to provide you the role.",
                                       title="Well... this is awkward."))
             await message.add_reaction("🤣")
