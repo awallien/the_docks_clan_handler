@@ -1,2 +1,3 @@
 from .discord_bot_util import DiscordBotUtils
 from .discord_commands.command_docs import discord_bot_command_docs
+from .discord_commands.command_drops import discord_bot_command_drops
