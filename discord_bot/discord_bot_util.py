@@ -19,22 +19,8 @@ def get_rank_icon_url(rank):
         raise Exception(f"Rank not found: {rank}")
     return ICON_URI_PATH + rank_to_icon[rank]
 
-def err_embed(msg, title="Error"):
-    return Embed(
-        title=title,
-        description=msg,
-        color=Color.dark_red()
-    )
-
-def info_embed(msg, title="Info"):
-    return Embed(
-        title=title,
-        description=msg,
-        color=Color.blue()
-    )
-
 def request_submitted_embed(msg):
-    return info_embed(msg, "Request Submitted")
+    pass
 
 async def set_true_autocompletion(_, current):
     return [
@@ -61,3 +47,8 @@ class DiscordBotUtils:
             color=Color.dark_red()
         )
     
+    @classmethod
+    def get_rank_icon_url(rank):
+        if rank not in rank_to_icon:
+            raise Exception(f"Rank not found: {rank}")
+        return ICON_URI_PATH + rank_to_icon[rank]

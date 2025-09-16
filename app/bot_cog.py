@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from .bot import TheDocksDiscordBot
 
 class DocksGroupCog(commands.GroupCog, name="docks"):
-    def __init__(self, bot: TheDocksDiscordBot) -> None:
+    def __init__(self, bot: "TheDocksDiscordBot") -> None:
         self.bot = bot
         super().__init__()
 
@@ -26,9 +26,16 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
                 ), 
                 ephemeral = True
             )
+        elif isinstance(error, app_commands.errors.NoPrivateMessage):
+            await interaction.response.send_message(
+                embed = DiscordBotUtils.error_embed(
+                    "Oops! My commands don’t work in DMs — try again in one of the designated servers!"
+                    "Trying to slide into my DMs?"
+                )
+            )
         else:
             await self.bot.mod.send(
-                content=f"Error occurred, {interaction.user} executed {interaction.command} with error: {error}"
+                content=f"Error occurred:\nuser: {interaction.user}\ncommand: {interaction.command.name}\ntype: {type(error)}\nerror: {error}"
             )
 
 
@@ -54,6 +61,7 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
                      interaction: Interaction, 
                      historical_days: app_commands.Choice[int]=30, 
                      member: str=None):
+        historical_days = historical_days.value if hasattr(historical_days, 'value') else historical_days
         await discord_bot_command_drops(self.bot, interaction, historical_days, member)
 
 
@@ -61,3 +69,7 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
     @app_commands.checks.has_role(settings.ALLOWED_ROLE)
     async def _spin(self, interaction: Interaction):
         pass
+
+
+    # wiki for gear
+    # donate

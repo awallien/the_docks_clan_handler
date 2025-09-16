@@ -1,5 +1,5 @@
 from pandas import isna
-from db.clan_database import ClanDatabase
+from discord_bot import DiscordBotUtils
 from discord import Color, Embed, app_commands
 
 from util import logger, PlayerRankHandler, sanitize_player_rank
@@ -9,7 +9,7 @@ OPTIONS = ["add", "delete", "detail", "request_name_change", "request_rank_chall
 
 async def cb_player(BOT, ctx, player_name, option=None, name_change=None):   
     if option and option not in OPTIONS:
-        return err_embed(f"Error: invalid input for option ({option})")
+        return DiscordBotUtils.err_embed(f"Error: invalid input for option ({option})")
 
     is_detailed = False
     is_add = False
@@ -39,9 +39,9 @@ async def cb_player(BOT, ctx, player_name, option=None, name_change=None):
             embed = request_submitted_embed(msg)
             send_msg_to_mod = True
         else:
-            embed = err_embed(f"{player_name} already exists in the clan.")
+            embed = DiscordBotUtils.err_embed(f"{player_name} already exists in the clan.")
     elif player_info is None: 
-        embed = err_embed(f"{player_name} is not found in clan database.")
+        embed = DiscordBotUtils.err_embed(f"{player_name} is not found in clan database.")
     elif is_deleted:
         msg = f"Your request to delete {player_name} has been submitted to {BOT.mod.global_name}."
         embed = request_submitted_embed(msg)
@@ -50,14 +50,14 @@ async def cb_player(BOT, ctx, player_name, option=None, name_change=None):
         if sanitize_player_rank(player_info[ClanDatabase.RANK]) not in PlayerRankHandler.HONOR_RANKS:
             msg = f"Your request is denied, due to {player_name} not achieving the Honorable Ranks.\n" \
                   f"Please reach out to {BOT.mod.global_name} if this is a mistake."
-            embed = err_embed(msg, "Sorry")
+            embed = DiscordBotUtils.err_embed(msg, "Sorry")
         else:
             msg = f"Your request for {player_name}'s ranking challenge has been submitted to {BOT.mod.global_name}."
             embed = request_submitted_embed(msg)
             send_msg_to_mod = True
     elif req_name_change:
         if name_change is None:
-            embed = err_embed(f"`new_name` is not specified and is required for this command.")
+            embed = DiscordBotUtils.err_embed(f"`new_name` is not specified and is required for this command.")
         else:    
             msg = f"Your request for RSN name change from {player_name} to {name_change} has been submitted to {BOT.mod.global_name}."
             embed = request_submitted_embed(msg)

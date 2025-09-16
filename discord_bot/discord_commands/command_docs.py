@@ -1,11 +1,9 @@
 import discord
-from discord_bot.discord_bot_util import DiscordBotUtils
-
 
 async def discord_bot_command_docs(BOT, interaction: discord.Interaction):
     embed = discord.Embed(
-        title="Docs Hub",
-        description="Dock here for guides, plugins, and support — everything you need in one place.",
+        title="The \"Docs\" Hub",
+        description="**Dock** here for guides, plugins, and support — everything you need in one place.",
         color=discord.Color.blue(),
     )
 

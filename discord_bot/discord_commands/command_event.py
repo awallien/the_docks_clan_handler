@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from discord import app_commands, Thread, EntityType, PrivacyLevel, EventStatus
 
-from discord_bot import err_embed, info_embed
-from util import logger, RESPONSE_ERR
+from discord_bot import DiscordBotUtils
 
+def RESPONSE_ERR(msg): return (False, msg)
 
 OPTIONS = ["add", "update", "delete", "notify"]
 
@@ -83,7 +83,7 @@ def validate_date_times(option, start_time, end_time, tzone):
 
 async def event_cb(BOT, ctx, option, start_time, end_time, tzone):
     if option not in OPTIONS:
-        await ctx.send(embed=err_embed(f"{option} is not a valid option!"), ephemeral=True)
+        await ctx.send(embed=DiscordBotUtils.err_embed(f"{option} is not a valid option!"), ephemeral=True)
         return
     
     forum_thread = ctx.channel
@@ -94,23 +94,23 @@ async def event_cb(BOT, ctx, option, start_time, end_time, tzone):
         msg = f"This command only works on an event forum thread under '{BOT.forum_channel}'.\n" \
               f"If you are creating an event, please create a forum thread tagged as an 'Event' under '{BOT.forum_channel}', and " \
               f"execute this command under that thread."
-        await ctx.send(embed=err_embed(msg=msg), ephemeral=True)
+        await ctx.send(embed=DiscordBotUtils.err_embed(msg=msg), ephemeral=True)
     else:
         """
         The API to fetch the guild's event takes forever, so send a message in the meantime and update it later
         """
         if forum_thread.id in EVENTS_SET:
-            await ctx.send(embed=err_embed(msg="A previous executed event command is in progress. Please wait until it is done before executing a new event command.", 
+            await ctx.send(embed=DiscordBotUtils.err_embed(msg="A previous executed event command is in progress. Please wait until it is done before executing a new event command.", 
                                            title="Woah there!"))
             return
 
         EVENTS_SET.add(forum_thread.id)
         try:
-            reply_msg = await ctx.send(embed=info_embed("Please wait for this message to be updated", f"_{OPTIONS_TO_MSG[option][0]}_"))
+            reply_msg = await ctx.send(embed=DiscordBotUtils.info_embed("Please wait for this message to be updated", f"_{OPTIONS_TO_MSG[option][0]}_"))
 
             valid_times = validate_date_times(option, start_time, end_time, tzone)
             if not valid_times:
-                await reply_msg.edit(embed=err_embed(msg=valid_times.err))
+                await reply_msg.edit(embed=DiscordBotUtils.err_embed(msg=valid_times.err))
                 raise Exception(valid_times.err)
 
             start_time,end_time = valid_times
@@ -126,14 +126,15 @@ async def event_cb(BOT, ctx, option, start_time, end_time, tzone):
                 res = await notify_event(BOT, forum_thread) # notify
             
             if not res:
-                err = err_embed(f"{res.err}", "Something went wrong")
+                err = DiscordBotUtils.err_embed(f"{res.err}", "Something went wrong")
                 await reply_msg.edit(embeds=[err])
             else:
-                success = info_embed(f"{OPTIONS_TO_MSG[option][1]}\nEvent ID: {res}\nDO NOT DELETE THIS MESSAGE!", f"Success!")
+                success = DiscordBotUtils.info_embed(f"{OPTIONS_TO_MSG[option][1]}\nEvent ID: {res}\nDO NOT DELETE THIS MESSAGE!", f"Success!")
                 await reply_msg.edit(embeds=[success])
         
         except Exception as e:
-            logger.err(f"Error caught in {option}: {str(e)}")
+            print(e)
+            # .err(f"Error caught in {option}: {str(e)}")
         
         if forum_thread.id in EVENTS_SET:
             EVENTS_SET.remove(forum_thread.id)
@@ -320,6 +321,7 @@ async def find_thread_scheduled_event(BOT, forum_thread):
                         event = await BOT.guild.fetch_scheduled_event(event_id, with_counts=False)
                         return event
                     except:
-                        logger.debug(f"No event found with {event_id}, keep searching")
+                        continue
+                        # logger.debug(f"No event found with {event_id}, keep searching")
 
     return None
