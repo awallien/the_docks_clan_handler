@@ -52,7 +52,7 @@ def _make_embeds(bot: "TheDocksDiscordBot",
             color = discord.Color.blue(),
             description = f"Gathered {drops_for or 'the clan'}’s drops from the last {historical_days} days — straight from the drops channel and clogs thread. Feast your eyes:")
             .set_thumbnail(url="https://oldschool.runescape.wiki/images/Coins_10000.png?7fa38")
-            .set_footer(text="MVD Percentage = (MVD Value/Accumulated GP)*100")
+            .set_footer(text="¹MVD Percentage = (MVD Value/Accumulated GP)*100")
     )
 
     embeds = []
@@ -79,7 +79,7 @@ def _make_embeds(bot: "TheDocksDiscordBot",
 
             if idx % MAX_EMBED_FIELDS == 0:
                 embeds.append(embed)
-                embed = discord.Embed()
+                embed = discord.Embed().set_footer(text="¹MVD Percentage = (MVD Value/Accumulated GP)*100")
         
         if len(embed.fields) > 0:
             embeds.append(embed)

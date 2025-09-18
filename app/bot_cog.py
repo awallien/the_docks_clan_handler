@@ -61,15 +61,25 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
                      interaction: Interaction, 
                      historical_days: app_commands.Choice[int]=30, 
                      member: str=None):
-        historical_days = historical_days.value if hasattr(historical_days, 'value') else historical_days
+        if hasattr(historical_days, "value"):
+            historical_days = historical_days.value
         await discord_bot_command_drops(self.bot, interaction, historical_days, member)
 
 
     @app_commands.command(name="spin", description="Let me decide what to pick!")
     @app_commands.checks.has_role(settings.ALLOWED_ROLE)
-    async def _spin(self, interaction: Interaction):
-        pass
-
+    @app_commands.describe(
+        options="2 or more options to put on the spinner, separated by semi-colons (Ex: opt1;opt2;opt3)",
+        weights="Weights associated to each option (i.e. weight 5000 is 1/5000 chance of choosing this option), in range 1 to 1000000",
+        randomize_weights="Randomize weights, can be set with or without weights inputted"
+    )
+    async def _spin(self, 
+                    interaction: Interaction,
+                    options: str,
+                    weights: str="",
+                    randomize_weights: bool=False):
+        await discord_bot_command_spin(interaction, options, weights, randomize_weights)
 
     # wiki for gear
+    # get news of the week
     # donate
