@@ -4,7 +4,7 @@ import discord
 from dataclasses import dataclass, field
 from datetime import timedelta, timezone
 
-from discord_bot import DiscordBotUtils as dbu
+from discord_bot import EmbedUtil
 
 from typing import Dict, TYPE_CHECKING
 if TYPE_CHECKING:
@@ -147,7 +147,8 @@ async def discord_bot_command_drops(bot: "TheDocksDiscordBot",
                                     member: str=None):
     if not member and not interaction.user == bot.mod:
         await interaction.response.send_message(
-            embed=dbu.error_embed(f"Sorry, only Goose is allowed not to specify a player.", title="Please specify a member.")
+            embed=EmbedUtil.error_embed(f"Sorry, only Goose is allowed not to specify a player.", title="Please specify a member."),
+            ephemeral=True
         )
         return
     

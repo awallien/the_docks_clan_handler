@@ -5,7 +5,7 @@ from io import BytesIO
 from PIL import Image, ImageDraw
 from typing import List
 
-from discord_bot import DiscordBotUtils
+from discord_bot import EmbedUtil
 from resources import CHAT_BG, OSRS_FONT
 
 invalid_param_msg = ""
@@ -161,7 +161,7 @@ async def discord_bot_command_spin(interaction: discord.Interaction,
 
     if not _validate_params(weight_fields, opt_len):
         await interaction.response.send_message(
-            embed=DiscordBotUtils.error_embed(invalid_param_msg)
+            embed=EmbedUtil.error_embed(invalid_param_msg)
         )
         return
 
