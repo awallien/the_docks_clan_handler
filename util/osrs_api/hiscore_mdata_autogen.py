@@ -93,6 +93,7 @@ SKILLS = [
 ]
 
 ACTIVITIES = [
+    "placeholder", # should be the sailing level, but stats show as an activity
     "League Points", "Deadman Points",
     "Bounty Hunter - Hunter", "Bounty Hunter - Rogue",
     "Bounty Hunter (Legacy) - Hunter", "Bounty Hunter (Legacy) - Rogue",
@@ -119,7 +120,8 @@ BOSSES = [
     "Lunar Chests", "Mimic",
     "Nex", "Nightmare", "Phosani's Nightmare", 
     "Obor", "Phantom Muspah",
-    "Sarachnis", "Scorpia", "Scurrius", "Skotizo", "Sol Heredit", "Spindel",
+    "Sarachnis", "Scorpia", "Scurrius", "Shellbane Gryphon", 
+    "Skotizo", "Sol Heredit", "Spindel",
     "Tempoross", "The Gauntlet", "The Corrupted Gauntlet",
     "The Hueycoatl", "The Leviathan", "The Royal Titans", "The Whisperer",
     "Theatre of Blood", "Theatre of Blood: Hard Mode", "Thermonuclear Smoke Devil",
