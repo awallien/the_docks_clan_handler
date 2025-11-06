@@ -1,6 +1,6 @@
-from discord import Embed, Color, app_commands
+from discord import Embed, Color
+from entity import ClanMemberRank
 
-ICON_URI_PATH = "https://oldschool.runescape.wiki/images/Clan_icon_-_"
 rank_to_icon = {
     '1':"Gnome_Child.png?b0561",    '2':"Kitten.png?9dc78",
     '3':"Adventurer.png?3630c",     '4':"Crew.png?6c963",
@@ -14,22 +14,21 @@ rank_to_icon = {
     'O':"Owner.png?53696"
 }
 
-def get_rank_icon_url(rank):
-    if rank not in rank_to_icon:
-        raise Exception(f"Rank not found: {rank}")
-    return ICON_URI_PATH + rank_to_icon[rank]
+class RankUtil:
 
-def request_submitted_embed(msg):
-    pass
+    ICON_URI_PATH = "https://oldschool.runescape.wiki/images/Clan_icon_-_"
 
-async def set_true_autocompletion(_, current):
-    return [
-        app_commands.Choice(name=choice, value=choice)
-        for choice in ["True"] if current.lower() in choice.lower()
-    ]
+    rank_to_icon = {
 
+    }
 
-class DiscordBotUtils:
+    @classmethod
+    def get_rank_icon_url(cls, rank: ClanMemberRank):
+        if rank not in rank_to_icon:
+            raise NotImplementedError(f"Rank {rank} icon does not exist")
+        return cls.ICON_URI_PATH + rank_to_icon[rank]
+
+class EmbedUtil:
 
     @classmethod
     def info_embed(cls, msg, title="Info"):
@@ -46,9 +45,9 @@ class DiscordBotUtils:
             description=msg,
             color=Color.dark_red()
         )
-    
-    @classmethod
-    def get_rank_icon_url(rank):
-        if rank not in rank_to_icon:
-            raise Exception(f"Rank not found: {rank}")
-        return ICON_URI_PATH + rank_to_icon[rank]
+
+class DiscordBotCommandMemberOptions:
+    NEW = 0
+    UPDATE = 1
+    DELETE = 2
+    CLAN_STATS = 3

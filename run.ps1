@@ -15,7 +15,7 @@ if (-not $ArgsFromUser -or $ArgsFromUser.Count -eq 0) {
     exit 1
 }
 
-# === Run util/.../foo.py first ===
+# === Auto-generate hiscore metadata first ===
 Write-Info "Auto-generating python files..."
 python "util\osrs_api\hiscore_mdata_autogen.py"
 if ($LASTEXITCODE -ne 0) {

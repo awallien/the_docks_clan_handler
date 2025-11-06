@@ -20,7 +20,7 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
         if isinstance(error, app_commands.MissingRole):
             role = error.missing_role
             await interaction.response.send_message(
-                embed = DiscordBotUtils.error_embed(
+                embed = EmbedUtil.error_embed(
                     f"You don't have the required role: **{role}** to use this command!",
                     "Well... this is awkward."
                 ), 
@@ -28,7 +28,7 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
             )
         elif isinstance(error, app_commands.errors.NoPrivateMessage):
             await interaction.response.send_message(
-                embed = DiscordBotUtils.error_embed(
+                embed = EmbedUtil.error_embed(
                     "Oops! My commands don’t work in DMs — try again in one of the designated servers!"
                     "Trying to slide into my DMs?"
                 )
@@ -79,6 +79,55 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
                     weights: str="",
                     randomize_weights: bool=False):
         await discord_bot_command_spin(interaction, options, weights, randomize_weights)
+
+    
+    @app_commands.command(name="new_member", description="Let me know if a new member joined the clan!")
+    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    @app_commands.describe(
+        member="RSN of new member"
+    )
+    async def new_member(self, 
+                        interaction: Interaction,
+                        member: str):
+        await discord_bot_command_member(self.bot, interaction, DiscordBotCommandMemberOptions.NEW, member)
+
+    @app_commands.command(name="update_member", description="You updated something about youself in the game, and it needs my attention.")
+    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    @app_commands.describe(
+        member="RSN of new member",
+        name_change="I changed my RSN to..."
+    )
+    async def update_member(self,
+                            interaction: Interaction,
+                            member: str,
+                            name_change: str = ""):
+        await discord_bot_command_member(self.bot, interaction, DiscordBotCommandMemberOptions.UPDATE, member, name_change=name_change)
+
+    @app_commands.command(name="delete_member", description="I am sad to see you go! :(")
+    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    @app_commands.describe(
+        member="RSN of member that left the clan"
+    )
+    async def delete_member(self,
+                            interaction: Interaction,
+                            member: str):
+        await discord_bot_command_member(self.bot, interaction, DiscordBotCommandMemberOptions.DELETE, member)
+
+    
+    @app_commands.command(name="clan_stats", description="See your clan stats. I'll look away...")
+    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    @app_commands.describe(
+        member="RSN of clan member"
+    )
+    async def clan_stats(self,
+                        interaction: Interaction,
+                        member: str):
+        await discord_bot_command_member(self.bot, interaction, DiscordBotCommandMemberOptions.CLAN_STATS, member)
+
+    @app_commands.command(name="challenge", description="I see you are bored. Want a challenge?")
+    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    async def _challenge(self, interaction: Interaction):
+        await discord_bot_command_challenge(self.bot, interaction)
 
     # wiki for gear
     # get news of the week

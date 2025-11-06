@@ -5,7 +5,7 @@ import discord
 from discord import Intents, utils as discord_utils, ClientException
 from pathlib import Path
 
-from discord_bot import DiscordBotUtils as dbu
+from discord_bot import EmbedUtil as dbu
 from discord.ext import commands
 
 from .config import settings
