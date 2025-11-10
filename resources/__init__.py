@@ -1,8 +1,14 @@
-import pathlib
-import os
+from pathlib import Path
 from PIL import ImageFont
 
-__DIR_PATH = str(pathlib.Path(__file__).parent.absolute())
+# Base directory for all resources
+DIR_PATH = Path(__file__).resolve().parent
 
-CHAT_BG = os.path.join(__DIR_PATH, "background.png")
-def OSRS_FONT(size, **kwargs): return ImageFont.truetype(__DIR_PATH + "/runescape_uf.ttf", size, **kwargs)
+# Resource file paths
+CHAT_BG = DIR_PATH / "background.png"
+RANK_ICONS_JSON_PATH = DIR_PATH / "rank_icons.json"
+
+def OSRS_FONT(size: int, **kwargs) -> ImageFont.FreeTypeFont:
+    """Load the RuneScape font at the given size."""
+    font_path = DIR_PATH / "runescape_uf.ttf"
+    return ImageFont.truetype(str(font_path), size, **kwargs)
