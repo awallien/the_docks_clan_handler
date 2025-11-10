@@ -14,9 +14,7 @@ class RankService:
     DAYS_PER_MONTH = 30
     
     def __init__(self):   
-        if hasattr(self.__class__, "_has_instance"):
-            raise RuntimeError("Cannot create another instance")
-        self.__class__._has_instance = True            
+        pass     
 
     @classmethod
     def new_member_rank(cls, hiscore_data: Hiscore) -> ClanMemberRank:

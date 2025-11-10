@@ -1,7 +1,6 @@
 
 from typing import Optional
 from service import ClanMemberService, rank_service
-from logging import DEBUG, ERROR
 from db import DataFrameDatabaseDirCache, DataFrameDatabase
 from dao import ClanMemberFields
 from util import Hiscore

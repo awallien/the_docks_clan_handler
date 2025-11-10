@@ -1,32 +1,34 @@
+import json
+
 from discord import Embed, Color
 from entity import ClanMemberRank
-
-rank_to_icon = {
-    '1':"Gnome_Child.png?b0561",    '2':"Kitten.png?9dc78",
-    '3':"Adventurer.png?3630c",     '4':"Crew.png?6c963",
-    '5':"Achiever.png?45aef",       '6':"Fire.png?f7cb3",
-    '7':"Inquisitor.png?0f3a8",     '8':"Barbarian.png?f92d8",
-    '9':"Diamond.png?f7cb3",        '10':"Crusader.png?87d1d",
-    '11':"Beast.png?53696",         '12':"Epic.png?f3acc",
-    '13':"Raider.png?fff9d",        '14':"Gamer.png?3630c",
-    'A':"Administrator.png?9dc78", 
-    'D':"Deputy_owner.png?b0561",
-    'O':"Owner.png?53696"
-}
+from resources import RANK_ICONS_JSON_PATH
 
 class RankUtil:
+    _rank_to_icon = dict()
 
-    ICON_URI_PATH = "https://oldschool.runescape.wiki/images/Clan_icon_-_"
-
-    rank_to_icon = {
-
-    }
+    @classmethod
+    def _load_data(cls):
+        if cls._rank_to_icon:
+            return
+        
+        with open(RANK_ICONS_JSON_PATH, "r", encoding="utf-8") as jsonfp:
+            data = json.load(jsonfp)
+        
+        uri_path = data["uri_path"]
+        cls._rank_to_icon = {
+            entry["rank"]: uri_path + entry["icon_path"]
+            for entry in data["ranks"]
+        }
 
     @classmethod
     def get_rank_icon_url(cls, rank: ClanMemberRank):
-        if rank not in rank_to_icon:
+        if not cls._rank_to_icon:
+            cls._load_data()
+        
+        if rank not in cls._rank_to_icon:
             raise NotImplementedError(f"Rank {rank} icon does not exist")
-        return cls.ICON_URI_PATH + rank_to_icon[rank]
+        return cls._rank_to_icon[rank]
 
 class EmbedUtil:
 
