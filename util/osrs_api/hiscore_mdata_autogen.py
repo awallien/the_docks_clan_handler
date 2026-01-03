@@ -89,12 +89,11 @@ SKILLS = [
     "crafting", "smithing", "mining",
     "herblore", "agility", "thieving",
     "slayer", "farming", "runecrafting",
-    "hunter", "construction"
+    "hunter", "construction", "sailing"
 ]
 
 ACTIVITIES = [
-    "placeholder", # should be the sailing level, but stats show as an activity
-    "League Points", "Deadman Points",
+    "Grid Points", "League Points", "Deadman Points",
     "Bounty Hunter - Hunter", "Bounty Hunter - Rogue",
     "Bounty Hunter (Legacy) - Hunter", "Bounty Hunter (Legacy) - Rogue",
     "Clue Scrolls (all)", "Clue Scrolls (beginner)", "Clue Scrolls (easy)",
