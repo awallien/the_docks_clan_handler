@@ -78,7 +78,7 @@ async def discord_bot_command_member(bot: "TheDocksDiscordBot",
                                      **kwargs):
     if option not in clan_member_options:
         await bot.mod.send(f"Error: Unsupported option in discort bot command member: {option}")
-    await clan_member_options[option](bot, interaction, member, kwargs)
+    await clan_member_options[option](bot=bot, interaction=interaction, member=member, **kwargs)
 
 async def discord_bot_command_challenge(bot: "TheDocksDiscordBot",
                                         interaction: discord.Interaction):

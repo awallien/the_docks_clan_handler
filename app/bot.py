@@ -74,6 +74,8 @@ class TheDocksDiscordBot(commands.Bot):
         def _discord_get_or_fail(iterable, name):
             if not (res := discord_utils.get(iterable, name=name)):
                 print(f"{name} returns None")
+                if settings.dev_env():
+                    return
                 raise ValueError(f"{name} returns None")
             return res
 

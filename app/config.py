@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     CLUE_THREAD: str
     CLOG_THREAD: str
 
+    ENV: str
+
+    def dev_env(self):
+        return self.ENV == "development"
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
