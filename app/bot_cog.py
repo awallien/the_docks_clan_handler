@@ -117,12 +117,14 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
     @app_commands.command(name="clan_stats", description="See your clan stats. I'll look away...")
     @app_commands.checks.has_role(settings.ALLOWED_ROLE)
     @app_commands.describe(
-        member="RSN of clan member"
+        member="RSN of clan member",
+        verbose="Show Hiscore details behind this rank"
     )
     async def clan_stats(self,
                         interaction: Interaction,
-                        member: str):
-        await discord_bot_command_member(self.bot, interaction, DiscordBotCommandMemberOptions.CLAN_STATS, member)
+                        member: str,
+                        verbose: bool = False):
+        await discord_bot_command_member(self.bot, interaction, DiscordBotCommandMemberOptions.CLAN_STATS, member, verbose=verbose)
 
     @app_commands.command(name="challenge", description="I see you are bored. Want a challenge?")
     @app_commands.checks.has_role(settings.ALLOWED_ROLE)

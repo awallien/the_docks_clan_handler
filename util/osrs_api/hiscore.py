@@ -22,9 +22,9 @@ class AccountTypes(Enum):
     FRESH_START = "_fresh_start"
 
 class Hiscore:
-    def __init__(self, username: str, account_type: AccountTypes = None):
+    def __init__(self, username: str, account_type: AccountTypes = AccountTypes.NORMAL):
         self._username = username
-        self._account_type = account_type or AccountTypes.NORMAL
+        self._account_type = account_type
         
         self._total_xp = -1
         self._total_rank = -1

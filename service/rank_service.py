@@ -1,6 +1,7 @@
 
 from datetime import datetime
-from util.osrs_api import Hiscore, SKILLS as osrs_api_SKILLS
+from typing import Dict, List
+from util.osrs_api import Hiscore, SKILLS as osrs_api_SKILLS, Skill
 from entity import ClanMemberRank
     
 class RankService:
@@ -13,9 +14,6 @@ class RankService:
     TOLERANCE_DAYS = 1
     DAYS_PER_MONTH = 30
     
-    def __init__(self):   
-        pass     
-
     @classmethod
     def new_member_rank(cls, hiscore_data: Hiscore) -> ClanMemberRank:
         """Place new member rank in either RANK_1 or RANK_2"""
@@ -32,7 +30,7 @@ class RankService:
         return ClanMemberRank.RANK_1
     
     @classmethod
-    def get_next_rank(cls, hiscore_data: Hiscore, current_rank: ClanMemberRank, current_joined_date: int) -> ClanMemberRank:
+    def get_next_rank(cls, hiscore_data: Hiscore, current_rank: ClanMemberRank, current_joined_date: int) -> str:
         """Given the clan member's current, check and return the next rank"""       
         assert not current_rank == ClanMemberRank.RANK_INVALID, "Clan member's rank is invalid"
         if ((current_rank == ClanMemberRank.RANK_15) or
@@ -117,32 +115,54 @@ class RankService:
         return ClanMemberRank.RANK_5
 
     @classmethod
+    def get_cmb_skills(cls, hiscore_data: Hiscore) -> Dict[str, Skill]:
+        """Get dict of combat skills"""
+        skills = hiscore_data.skills
+        attack = skills.attack
+        strength = skills.strength
+        defence = skills.defence
+
+        return {
+            "attack": attack,
+            "strength": strength,
+            "defence": defence,
+            "ranged": skills.ranged,
+            "magic": skills.magic,
+        }
+    
+    @classmethod
     def get_cmb_skills_avg(cls, hiscore_data: Hiscore) -> int:
         """Get average combat skill levels from [max(attack, strength, defence), ranged, level]"""
-        skills = hiscore_data.skills
-        
-        attack_lvl = skills.attack.level
-        strength_lvl = skills.strength.level
-        defence_lvl = skills.defence.level
-        ranged_lvl = skills.ranged.level
-        magic_lvl = skills.magic.level
+        cmb_skills = cls.get_cmb_skills(hiscore_data)
+        attack = cmb_skills["attack"]
+        strength = cmb_skills["strength"]
+        defence = cmb_skills["defence"]
+        ranged = cmb_skills["ranged"]
+        magic = cmb_skills["magic"]
 
-        max_melee_lvl = max(attack_lvl, strength_lvl, defence_lvl)
-        avg_cmb_lvl = cls._get_avg(max_melee_lvl, ranged_lvl, magic_lvl)
+        max_melee_skill = cls.get_max_skills(attack, strength, defence, n_highest=1)[0]
+        avg_cmb_lvl = cls._get_avg(max_melee_skill.level, ranged.level, magic.level)
 
         return int(avg_cmb_lvl)
 
     @classmethod
+    def get_non_cmb_skills(cls, hiscore_data: Hiscore, n_highest=3) -> List[Skill]:
+        """Get n_highest non-combat skills"""
+        skills = [hiscore_data.skills.get(non_cmb_sk) for non_cmb_sk in cls.NON_CMB_SKILLS]
+        return cls.get_max_skills(*skills, n_highest=n_highest)
+
+    @classmethod
     def get_non_cmb_skills_avg(cls, hiscore_data: Hiscore, n_highest=3) -> int:
         """Get average of non-combat skill levels of n_highest skills"""
-        skills = hiscore_data.skills
-        skill_lvls = [skills.get(skill) for skill in cls.NON_CMB_SKILLS]
-        skill_lvls.sort(key=lambda item: item.level, reverse=True)
-
-        highest_skills = map(lambda s: s.level, skill_lvls[:n_highest])
-        avg_non_cmb_lvl = cls._get_avg(*highest_skills)
-
+        highest_skills = cls.get_non_cmb_skills(hiscore_data, n_highest=n_highest)
+        avg_non_cmb_lvl = cls._get_avg(*map(lambda sk: sk.level, highest_skills))
         return int(avg_non_cmb_lvl)
+
+    @staticmethod
+    def get_max_skills(*skills, n_highest=1) -> Skill:
+        """Compare skills and return the max skill(s)"""
+        skills_sorted = sorted(skills, key=lambda sk: sk.xp, reverse=True)
+        return skills_sorted[:n_highest]
 
     @staticmethod
     def _get_avg(*args) -> float:
