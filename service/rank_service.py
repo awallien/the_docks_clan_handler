@@ -34,8 +34,7 @@ class RankService:
         """Given the clan member's current, check and return the next rank"""       
         assert not current_rank == ClanMemberRank.RANK_INVALID, "Clan member's rank is invalid"
         if ((current_rank == ClanMemberRank.RANK_15) or
-            (current_rank in ClanMemberRank.honorable_ranks_challenged()) or
-            (current_rank in ClanMemberRank.honorable_ranks_non_challenged()) or
+            (current_rank in ClanMemberRank.honorable_ranks()) or
             (current_rank in ClanMemberRank.administrative_ranks())):
             return current_rank
         
@@ -140,7 +139,7 @@ class RankService:
         ranged = cmb_skills["ranged"]
         magic = cmb_skills["magic"]
 
-        max_melee_skill = cls.get_max_skills(attack, strength, defence, n_highest=1)[0]
+        max_melee_skill = cls.get_max_skills(attack, strength, defence, n_highest=1)
         avg_cmb_lvl = cls._get_avg(max_melee_skill.level, ranged.level, magic.level)
 
         return int(avg_cmb_lvl)
@@ -159,10 +158,12 @@ class RankService:
         return int(avg_non_cmb_lvl)
 
     @staticmethod
-    def get_max_skills(*skills, n_highest=1) -> Skill:
-        """Compare skills and return the max skill(s)"""
+    def get_max_skills(*skills, n_highest=1) -> Skill|List[Skill]:
+        """Compare skills and return the max skill or list of max skills"""
         skills_sorted = sorted(skills, key=lambda sk: sk.xp, reverse=True)
-        return skills_sorted[:n_highest]
+        if n_highest == 1:
+            return skills_sorted[0]
+        return skills_sorted[:min(len(osrs_api_SKILLS), n_highest)]
 
     @staticmethod
     def _get_avg(*args) -> float:

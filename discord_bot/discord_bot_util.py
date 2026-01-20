@@ -9,6 +9,34 @@ from service import rank_service
 from util import Skill, Hiscore
 from resources import RANK_ICONS_JSON_PATH
 
+skills_initials = {
+	"attack": "att",
+	"defence": "def",
+	"strength": "str",
+	"hitpoints": "hp",
+	"ranged": "rgd",
+	"prayer": "pry",
+	"magic": "mag",
+	"cooking": "ckg",
+	"woodcutting": "wc",
+	"fletching": "flc",
+	"fishing": "fsh",
+	"firemaking": "fmk",
+	"crafting": "cft",
+	"smithing": "smt",
+	"mining": "min",
+	"herblore": "hrb",
+	"agility": "agi",
+	"thieving": "thv",
+	"slayer": "sly",
+	"farming": "frm",
+	"runecrafting": "rc",
+	"hunter": "hnt",
+	"construction": "con",
+	"sailing": "sai",
+}
+
+
 @dataclass
 class RankSkillStats:
     max_melee: Skill
@@ -49,12 +77,22 @@ class RankUtil:
         return cls._rank_to_icon[rank]
     
     @classmethod
-    def get_skill_stats(cls, member: str, rank: ClanMemberRank, joined_date: int) -> RankSkillStats | None:
+    def get_skill_stats(cls, member: str, rank: ClanMemberRank, joined_date: int) -> str:
+        """Get skill stats - next rank, cmb avg, non-cmb avg"""
         try:
             hiscore = Hiscore(member)
             skills = hiscore.skills
         except Exception as e:
-            return None
+            hiscore = None
+        
+        next_rank = rank_service.get_next_rank(hiscore, rank, joined_date)
+        next_rank_str = f"* **Next Rank**: {next_rank}"
+
+        if not hiscore:
+            return "\n".join([
+                "**Hiscore data unavailable. Using default rank.**",
+                next_rank_str
+            ])
 
         max_melee = rank_service.get_max_skills(
             skills.attack, skills.strength, skills.defence
@@ -62,24 +100,26 @@ class RankUtil:
         ranged_lvl = skills.ranged.level
         magic_lvl = skills.magic.level
         cmb_avg = (max_melee.level + ranged_lvl + magic_lvl) / 3
+        cmb_avg_str = f"* **Cmb. Avg. ({max_melee.name.capitalize()}/Ranged/Magic**: {max_melee.level}/{ranged_lvl}/{magic_lvl} ->  {cmb_avg:.2f})"
 
         n_highest = 3
-        if rank == ClanMemberRank.RANK_14:
-            n_highest = 6
-
+        match next_rank:
+            case ClanMemberRank.RANK_14:    n_highest = 6
+            case ClanMemberRank.RANK_15:    n_highest = len(rank_service.NON_CMB_SKILLS)
         max_non_cmb_skills = rank_service.get_non_cmb_skills(hiscore, n_highest=n_highest)
         non_cmb_avg = sum([sk.level for sk in max_non_cmb_skills]) / n_highest
-        next_rank = rank_service.get_next_rank(hiscore, rank, joined_date)
-
-        return RankSkillStats(
-            max_melee=max_melee,
-            ranged_lvl=ranged_lvl,
-            magic_lvl=magic_lvl,
-            cmb_avg=cmb_avg,
-            max_non_cmb_skills=max_non_cmb_skills,
-            non_cmb_avg=non_cmb_avg,
-            next_rank=next_rank
-        )
+        non_cmb_sk_lvls_str = "/".join(str(max(0,sk.level)) for sk in max_non_cmb_skills)
+        if n_highest > 6:
+            non_cmb_sk_names = "ALL"
+        else:
+            non_cmb_sk_names = "/".join([skills_initials[sk.name].capitalize() for sk in max_non_cmb_skills])
+        non_cmb_avg_str = f"* **Non-Cmb. Avg. ({non_cmb_sk_names})**: {non_cmb_sk_lvls_str} -> {non_cmb_avg:.2f}"
+        
+        return "\n".join([
+            cmb_avg_str,
+            non_cmb_avg_str,
+            next_rank_str
+        ])
 
 
 class EmbedUtil:   

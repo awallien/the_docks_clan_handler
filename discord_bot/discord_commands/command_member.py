@@ -69,26 +69,7 @@ async def _clan_stats_member(bot: "TheDocksDiscordBot",
 
     if kwargs["verbose"]:
         detail_stats = RankUtil.get_skill_stats(member, rank, clan_stats.joined_date)
-        if not detail_stats:
-            embed.add_field(name="\"Hidden\" Stats", value="No HiScore stats found.", inline=False)
-        else:
-            max_melee = detail_stats.max_melee
-            ranged_lvl = detail_stats.ranged_lvl
-            magic_lvl = detail_stats.magic_lvl
-            cmb_avg = detail_stats.cmb_avg
-            cmb_avg_str = f"* **Cmb. Avg. ({max_melee.name.capitalize()}/Ranged/Magic)**: {max_melee.level}/{ranged_lvl}/{magic_lvl} ->  {cmb_avg:.2f}\n"
-            
-            non_cmb_lvls = [sk.level for sk in detail_stats.max_non_cmb_skills]
-            non_cmb_lvls_avg = detail_stats.non_cmb_avg
-            non_cmb_names_str = "/".join([sk.name.capitalize() for sk in detail_stats.max_non_cmb_skills])
-            non_cmb_lvls_str = "/".join(non_cmb_lvls)
-            non_cmb_avg_str = f"* **Non Cmb. Avg. ({non_cmb_names_str}): {non_cmb_lvls_str} -> {non_cmb_lvls_avg:.2f}\n"
-            
-            next_rank_str = f"* **Next Rank**: {detail_stats.next_rank}"
-            
-            hidden_stats_str = f"{cmb_avg_str}{non_cmb_avg_str}{next_rank_str}"
-            
-            embed.add_field(name="\"Hidden\" Stats", value=hidden_stats_str, inline=False)
+        embed.add_field(name="\"Hidden\" Stats", value=detail_stats, inline=False)
 
     if footer_note:
         embed.set_footer(text=footer_note)
