@@ -8,43 +8,13 @@ from pathlib import Path
 from discord_bot import EmbedUtil as dbu
 from discord.ext import commands
 
-from db import DataFrameDatabaseDirCache, DataFrameDatabase
-from service import ClanMemberService
-from dao import ClanMemberFields
 from .config import settings
 from .bot_cog import DocksGroupCog
-
-class _TheDocksDiscordBotService:
-    def __init__(self, db_file_name):
-        self._db_file_name = db_file_name
-        self._cache: DataFrameDatabaseDirCache = DataFrameDatabaseDirCache()
-        self._db: DataFrameDatabase = self._cache.load(ClanMemberFields, db_file_name)
-        self._clan_member_service: ClanMemberService = ClanMemberService(self._db)
-
-    def add_member(self, name, joined_date):
-        return (
-            self._clan_member_service.add_member(name, joined_date) and 
-            self._cache.save(self._db, self._db_file_name)
-        )
-
-    def update_member(self, name, joined_date=0, rank=0, total_xp=0):
-        return (
-            self._clan_member_service.update_member(name, joined_date, rank, total_xp) and
-            self._cache.save(self._db, self._db_file_name)
-        )
-
-    def delete_member(self, name):
-        return self._clan_member_service.delete_member(name)
-
-    def get_member(self, name):
-        return self._clan_member_service.get_member(name)
-
 
 class TheDocksDiscordBot(commands.Bot):
 
     def __init__(self):
         self._init_logging()
-        self.service = _TheDocksDiscordBotService("clan_members.db")
         super().__init__(command_prefix="!", intents=self._init_intents())
 
     def _init_logging(self):

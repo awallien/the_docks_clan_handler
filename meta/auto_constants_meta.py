@@ -34,7 +34,7 @@ What I was looking for when I wanted to group members and access their values is
 but making it look like a fancy class, where members in the class actually return its assigned value.
 For instance I have Ranks and I wanted to call something like Ranks.RANK_3 to get the 3rd rank, which is
 simply '3'. I wanted only the '3' value, but I have to use Ranks.RANK_3.value to get the actual value.
-This resulted in my project flooded with .value calls, and it began to too ugly.
+This resulted in my project flooded with .value calls, and it began to look too ugly.
 
 To combat this, instead of Python's enum, the meta class below handles bundling all the values I'm
 using in a class so I don't have to statically assign specific values to clusters, such as in my 

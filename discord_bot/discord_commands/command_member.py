@@ -38,7 +38,7 @@ async def _clan_stats_member(bot: "TheDocksDiscordBot",
     # Defer in case hiscore is needed
     await interaction.response.defer(ephemeral=True)
 
-    clan_stats = bot.service.get_member(member)
+    clan_stats = None
     
     if not clan_stats:
         await interaction.edit_original_response(embed=EmbedUtil.error_embed(msg=f"Member '{member}' not found in the clan system."))
