@@ -23,7 +23,7 @@ COMMAND_SPECS: Tuple[CommandSpec, ...] = (
     ),
     CommandSpec(
         name="/rm",
-        usage="/rm [id ...]",
+        usage="/rm [members ...]",
         description="List all members or selected members' entries (space-separated) from clan DB",
         handler="cmd_rm",
     ),
@@ -35,41 +35,9 @@ COMMAND_SPECS: Tuple[CommandSpec, ...] = (
     ),
     CommandSpec(
         name="/dm",
-        usage="/dm [id ...]",
-        description="Delete a clan member's entry from clan DB",
+        usage="/dm [name ...]",
+        description="Delete clan member's entry(s) from clan DB",
         handler="cmd_dm",
-    ),
-
-    # DB commands
-    CommandSpec(
-        name="/newdb",
-        usage="/newdb",
-        description="Create a new database",
-        handler="cmd_newdb",
-    ),
-    CommandSpec(
-        name="/listdb",
-        usage="/listdb [id ...]",
-        description="List all DBs or selected DB IDs (space-separated) from cache",
-        handler="cmd_listdb",
-    ),
-    CommandSpec(
-        name="/savedb",
-        usage="/savedb <db-name>",
-        description="Save current running DB to cache/<db-name>",
-        handler="cmd_savedb",
-    ),
-    CommandSpec(
-        name="/loaddb",
-        usage="/loaddb [id=<id> OR name=<db-name>]",
-        description="Load existing DB by index or name from cache",
-        handler="cmd_loaddb",
-    ),
-    CommandSpec(
-        name="/deldb",
-        usage="/deldb [id=<id> OR name=<db-name>]",
-        description="Delete existing DB by index or name from cache",
-        handler="cmd_deldb",
     ),
 
     # Internal debug commands

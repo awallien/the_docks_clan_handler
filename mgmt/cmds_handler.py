@@ -36,26 +36,6 @@ class CommandSpecsHandler:
     @staticmethod
     def cmd_dm(tokens: List[str], **args):
         ...
-    
-    @staticmethod
-    def cmd_newdb(tokens: List[str], **args):
-        ...
-
-    @staticmethod
-    def cmd_listdb(tokens: List[str], **args):
-        ...
-
-    @staticmethod
-    def cmd_savedb(tokens: List[str], **args):
-        ...
-
-    @staticmethod
-    def cmd_loaddb(tokens: List[str], **args):
-        ...
-
-    @staticmethod
-    def cmd_deldb(tokens: List[str], **args):
-        ...
 
     @staticmethod
     def cmd_debug(tokens: List[str], **args):
