@@ -1,35 +1,82 @@
 import sqlite3
+import time
 from contextlib import contextmanager
 from pathlib import Path
+
 
 class Database:
     DB_CACHE_PATH = Path(__file__).parent.resolve() / "db_cache"
 
-    def __init__(self, db_name: str):
+    def __init__(self, db_name: str, timeout: float = 5.0):
         self.path = self.DB_CACHE_PATH / db_name
+        self.timeout = timeout
 
+        self.DB_CACHE_PATH.mkdir(parents=True, exist_ok=True)
+
+    # -------------------------
+    # Connection layer
+    # -------------------------
     @contextmanager
     def connection(self):
-        conn = sqlite3.connect(self.path)
+        conn = sqlite3.connect(
+            self.path,
+            timeout=self.timeout,
+        )
+
         conn.row_factory = sqlite3.Row
+
+        # Performance + concurrency settings
         conn.execute("PRAGMA journal_mode=WAL;")
         conn.execute("PRAGMA foreign_keys = ON;")
+        conn.execute("PRAGMA synchronous = NORMAL;")
 
         try:
             yield conn
         finally:
             conn.close()
 
-    
-    def execute(self, query, params=()):
-        with self.connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, params)
-            conn.commit()
-            return cursor
-        
+    # -------------------------
+    # Core execute (WRITE)
+    # -------------------------
+    def execute(self, query, params=(), retries=5):
+        last_error = None
+
+        for i in range(retries):
+            try:
+                with self.connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(query, params)
+                    conn.commit()
+                    return cursor
+
+            except sqlite3.OperationalError as e:
+                last_error = e
+
+                if "locked" in str(e).lower():
+                    time.sleep(0.05 * (i + 1))
+                    continue
+
+                raise  # other errors = real bugs
+
+        raise RuntimeError(f"Database locked too long: {last_error}")
+
+    # -------------------------
+    # READ helpers
+    # -------------------------
     def fetch_all(self, query, params=()):
-        return self.execute(query, params).fetchall()
-    
+        with self.connection() as conn:
+            cursor = conn.execute(query, params)
+            return cursor.fetchall()
+
     def fetch_one(self, query, params=()):
-        return self.execute(query, params).fetchone()
+        with self.connection() as conn:
+            cursor = conn.execute(query, params)
+            return cursor.fetchone()
+
+    # -------------------------
+    # Optional convenience
+    # -------------------------
+    def executescript(self, script: str):
+        with self.connection() as conn:
+            conn.executescript(script)
+            conn.commit()
