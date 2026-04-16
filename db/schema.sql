@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS clan(
+CREATE TABLE IF NOT EXISTS clan (
     id INTEGER PRIMARY KEY,
     member TEXT NOT NULL UNIQUE,
     joined_date DATE,
@@ -6,34 +6,51 @@ CREATE TABLE IF NOT EXISTS clan(
     last_rank_date DATE
 );
 
-CREATE TABLE IF NOT EXISTS skills(
+CREATE TABLE IF NOT EXISTS skills (
     id INTEGER PRIMARY KEY,
-    clan_id INTEGER UNIQUE,
-    attack INTEGER,
-    defence INTEGER,
-    strength INTEGER,
-    hitpoints INTEGER,
-    ranged INTEGER,
-    prayer INTEGER,
-    magic INTEGER,
-    cooking INTEGER,
-    woodcutting INTEGER,
-    fletching INTEGER,
-    fishing INTEGER,
-    firmaking INTEGER,
-    crafting INTEGER,
-    smithing INTEGER,
-    mining INTEGER,
-    herblore INTEGER,
-    agility INTEGER,
-    thieving INTEGER,
-    slayer INTEGER,
-    farming INTEGER,
-    runecrafting INTEGER,
-    hunter INTEGER,
-    construction INTEGER,
-    sailing INTEGER,
-    FOREIGN KEY(clan_id)
-        REFERENCES clan(id)
-        ON DELETE CASCADE
+    name TEXT UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS activities (
+    id INTEGER PRIMARY KEY,
+    name TEXT UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS bosses (
+    id INTEGER PRIMARY KEY,
+    name TEXT UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS clan_skills (
+    clan_id INTEGER NOT NULL,
+    skill_id INTEGER NOT NULL,
+    level INTEGER DEFAULT 0 CHECK(level >= 0),
+    total_xp INTEGER DEFAULT 0 CHECK(total_xp >= 0),
+
+    PRIMARY KEY (clan_id, skill_id),
+
+    FOREIGN KEY(clan_id) REFERENCES clan(id) ON DELETE CASCADE,
+    FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS clan_activities (
+    clan_id INTEGER NOT NULL,
+    activity_id INTEGER NOT NULL,
+    count INTEGER DEFAULT 0 CHECK(count >= 0),
+
+    PRIMARY KEY (clan_id, activity_id),
+
+    FOREIGN KEY(clan_id) REFERENCES clan(id) ON DELETE CASCADE,
+    FOREIGN KEY(activity_id) REFERENCES activities(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS clan_bosses (
+    clan_id INTEGER NOT NULL,
+    boss_id INTEGER NOT NULL,
+    count INTEGER DEFAULT 0 CHECK(count >= 0),
+
+    PRIMARY KEY (clan_id, boss_id),
+
+    FOREIGN KEY(clan_id) REFERENCES clan(id) ON DELETE CASCADE,
+    FOREIGN KEY(boss_id) REFERENCES bosses(id) ON DELETE CASCADE
 );
