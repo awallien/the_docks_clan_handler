@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 
+
 class Database:
     DB_CACHE_PATH = Path(__file__).parent.resolve() / "db_cache"
 
@@ -34,6 +35,20 @@ class Database:
             yield conn
         finally:
             conn.close()
+
+    # -------------------------
+    # INIT SCHEMA
+    # -------------------------
+    def init_schema(self, schema_path: str = None):
+        if schema_path is None:
+            schema_path = Path(__file__).parent / "schema.sql"
+
+        with open(schema_path, "r", encoding="utf-8") as f:
+            schema_sql = f.read()
+
+        with self.connection() as conn:
+            conn.executescript(schema_sql)
+            conn.commit()
 
     # -------------------------
     # Core execute (WRITE)

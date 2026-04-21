@@ -131,6 +131,13 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
     async def _challenge(self, interaction: Interaction):
         await discord_bot_command_challenge(self.bot, interaction)
 
+
+    @app_commands.command(name="leagues_board", description="Who's doing leagues?")
+    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    async def leagues_board(self,
+                            interaction: Interaction):
+        await discord_bot_leagues_board(self.bot, interaction)
+
     # wiki for gear
     # get news of the week
     # donate

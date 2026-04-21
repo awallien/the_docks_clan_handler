@@ -1,4 +1,3 @@
-# container.py
 from db import Database
 
 from repositories import (
@@ -16,12 +15,13 @@ from services import (
     SkillService,
     ActivityService,
     BossService,
+    RankService,
 )
 
 
 class Container:
-    def __init__(self, db_path: str):
-        self.db = Database(db_path)
+    def __init__(self, db: Database):
+        self.db = db
 
         # cache for singletons
         self._instances = {}
@@ -55,13 +55,13 @@ class Container:
     # Service providers
     # -------------------
 
-    def clan_service(self):
+    def clan_service(self) -> ClanService:
         return self._get(
             "clan_service",
             lambda: ClanService(self.clan_repo())
         )
 
-    def skill_service(self):
+    def skill_service(self) -> SkillService:
         return self._get(
             "skill_service",
             lambda: SkillService(
@@ -71,7 +71,7 @@ class Container:
             )
         )
 
-    def activity_service(self):
+    def activity_service(self) -> ActivityService:
         return self._get(
             "activity_service",
             lambda: ActivityService(
@@ -81,7 +81,7 @@ class Container:
             )
         )
 
-    def boss_service(self):
+    def boss_service(self) -> BossService:
         return self._get(
             "boss_service",
             lambda: BossService(
@@ -89,6 +89,12 @@ class Container:
                 self.clan_boss_repo(),
                 self.clan_repo(),
             )
+        )
+    
+    def rank_service(self) -> RankService:
+        return self._get(
+            "rank_service",
+            lambda: RankService()
         )
 
     # -------------------

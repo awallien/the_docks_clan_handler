@@ -1,3 +1,6 @@
+from typing import List
+
+
 class ClanService:
     def __init__(self, clan_repo):
         self.clan_repo = clan_repo
@@ -16,6 +19,10 @@ class ClanService:
         if not member:
             raise ValueError("Member not found")
         return member
+    
+    def get_members(self, mambers: List[str]):
+        members = self.clan_repo.get_members(members)
+        return members
 
     def list_members(self):
         return self.clan_repo.list_all()
@@ -23,3 +30,6 @@ class ClanService:
     def delete_member(self, name):
         member = self.get_member(name)
         self.clan_repo.delete(member["id"])
+
+    def delete_members(self, members: List[str]):
+        return self.clan_repo.delete_members(members)

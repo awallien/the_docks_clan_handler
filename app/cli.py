@@ -13,6 +13,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from container import Container
 from mgmt import COMMAND_HANDLERS, COMMAND_HELP, HELP_ROWS, CommandSpecsHandler
 
 class DocksClanCLICompleter(Completer):
@@ -39,13 +40,14 @@ class DocksClanCLICompleter(Completer):
 class DocksClanCLI:
     """Interactive runtime CLI"""
 
-    def __init__(self, ):
+    def __init__(self, container: Container):
         self._cli_prompt = "docks> "
         self._console = Console()
         self._session = self._build_prompt_session()
         self._completer = DocksClanCLICompleter(COMMAND_HELP)
         self._interrupt_armed = False
         self._last_interrupt_at = 0.0
+        self._handler = CommandSpecsHandler(container)
 
     def _build_prompt_session(self) -> PromptSession:
         history_file = Path(__file__).parent.resolve() / ".cli_history"
@@ -156,11 +158,11 @@ class DocksClanCLI:
             self._error(f"Unknown command: {command}")
             return
         
-        handler = getattr(CommandSpecsHandler, handler_name)
+        handler = getattr(self._handler, handler_name)
 
         try:
             resp = handler(args)
-            if resp.success:
+            if resp:
                 self._ok(resp.msg)
             else:
                 self._error(resp.msg)

@@ -11,10 +11,13 @@ from discord.ext import commands
 from .config import settings
 from .bot_cog import DocksGroupCog
 
+from container import Container
+
 class TheDocksDiscordBot(commands.Bot):
 
     def __init__(self):
         self._init_logging()
+        self.container: Container = None
         super().__init__(command_prefix="!", intents=self._init_intents())
 
     def _init_logging(self):
@@ -107,8 +110,11 @@ class TheDocksDiscordBot(commands.Bot):
                                       title="Well... this is awkward."))
             await message.add_reaction("🤣")
 
-    async def run(self):
+    async def setup_hook(self):
         await self.add_cog(DocksGroupCog(self))
+        
+    async def run(self, container: Container):
+        self.container = container
         await super().start(settings.DISCORD_TOKEN, reconnect=True)
 
 """Discord Bot Init"""

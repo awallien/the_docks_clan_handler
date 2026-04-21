@@ -94,5 +94,5 @@ async def discord_bot_command_member(bot: "TheDocksDiscordBot",
 async def discord_bot_command_challenge(bot: "TheDocksDiscordBot",
                                         interaction: discord.Interaction):
     caller = interaction.message.author
-    await interaction.response.send_message(content="Request sent to Goose. Please allow 1-2 days for Goose to get back to ya with a spicy challenge.")
+    await interaction.response.send_message(content="Request sent to Goose. Please allow 1-2 days for Goose to get back to you with a spicy challenge.")
     bot.mod.send(f"{caller} requests a challenge :)")

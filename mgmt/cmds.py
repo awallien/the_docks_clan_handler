@@ -17,7 +17,7 @@ COMMAND_SPECS: Tuple[CommandSpec, ...] = (
     # Clan member's entry commands
     CommandSpec(
         name="/cm",
-        usage="/cm <key=value>",
+        usage="/cm member=... joined_date=... rank=...",
         description="Create a new clan member's entry in clan DB",
         handler="cmd_cm",
     ),
@@ -29,23 +29,15 @@ COMMAND_SPECS: Tuple[CommandSpec, ...] = (
     ),
     CommandSpec(
         name="/um",
-        usage="/um <key=value>",
+        usage="/um member=... [key=value ...]",
         description="Update a clan member's info in clan DB",
         handler="cmd_cm",
     ),
     CommandSpec(
         name="/dm",
-        usage="/dm [name ...]",
+        usage="/dm [members ...]",
         description="Delete clan member's entry(s) from clan DB",
         handler="cmd_dm",
-    ),
-
-    # Internal debug commands
-    CommandSpec(
-        name="/debug",
-        usage="/debug ['on' OR 'off']",
-        description="Enable or disable debugs through CLI",
-        handler="cmd_debug",
     ),
 
     # Internal help, exit, quit

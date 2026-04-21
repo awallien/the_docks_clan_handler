@@ -9,4 +9,4 @@ util/osrs_api/*bosses.py
 logs/
 db/cache/
 scratchpad*
-
+.venv

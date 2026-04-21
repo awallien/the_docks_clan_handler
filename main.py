@@ -1,38 +1,40 @@
 import asyncio
 import argparse
 
-from app import DocksClanCLI, BOT
+from app import DocksClanCLI, BOT, clan_db_schdeduler
+from container import Container
+from db import Database, init_schema
 
 stop_event = asyncio.Event()
 
-def blocking_cli(commands=[]):
-    cli = DocksClanCLI()
-    cli.run(commands)
-
-async def run_cli(commands=[]):
-    await asyncio.to_thread(blocking_cli, commands=commands)
+async def run_cli(container):
+    await asyncio.to_thread(
+        lambda: DocksClanCLI(container).run()
+    )
 
 async def main():
     parser = argparse.ArgumentParser(description="Docks Clan App")
     parser.add_argument('--cli', action='store_true', help='Enable CLI mode')
     parser.add_argument('--bot', action='store_true', help='Enable Bot mode')
-    parser.add_argument('--cmds_file', type=argparse.FileType('r'), help="Path to a file containing commands, one per line")
 
     args = parser.parse_args()
-    commands = []
     tasks = []
 
     if not (args.cli or args.bot):
         parser.error("At least one of --cli or --bot must be specified.")
         exit(1)
-        
+
+    db = Database("clan.db")
+    init_schema(db)
+    container = Container(db)
+
+    tasks.append(asyncio.create_task(clan_db_schdeduler(container, init_delay=900, delay=3600)))
+
     if args.cli:
-        if args.cmds_file:
-            commands = [line.strip() for line in args.cmd_file if line.strip()]
-        tasks.append(asyncio.create_task(run_cli(commands=commands)))
+        tasks.append(asyncio.create_task(run_cli(container)))
         
     if args.bot:
-        tasks.append(asyncio.create_task(BOT.run()))
+        tasks.append(asyncio.create_task(BOT.run(container)))
     
     try:
         # Wait until stop_event is triggered (via CLI exit or KeyboardInterrupt)
