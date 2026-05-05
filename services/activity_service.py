@@ -1,9 +1,11 @@
 
+from repositories import ActivityRepository, ClanActivityRepository, ClanRepository
+
 class ActivityService:
     def __init__(self, activity_repo, clan_activity_repo, clan_repo):
-        self.activity_repo = activity_repo
-        self.clan_activity_repo = clan_activity_repo
-        self.clan_repo = clan_repo
+        self.activity_repo: ActivityRepository = activity_repo
+        self.clan_activity_repo: ClanActivityRepository = clan_activity_repo
+        self.clan_repo: ClanRepository = clan_repo
 
     def _get_activity(self, name):
         activity = self.activity_repo.get_by_name(name)

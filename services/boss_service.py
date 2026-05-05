@@ -1,9 +1,10 @@
+from repositories import BossRepository, ClanBossRepository, ClanRepository
 
 class BossService:
     def __init__(self, boss_repo, clan_boss_repo, clan_repo):
-        self.boss_repo = boss_repo
-        self.clan_boss_repo = clan_boss_repo
-        self.clan_repo = clan_repo
+        self.boss_repo: BossRepository = boss_repo
+        self.clan_boss_repo: ClanBossRepository = clan_boss_repo
+        self.clan_repo: ClanRepository = clan_repo
 
     def _get_boss(self, name):
         boss = self.boss_repo.get_by_name(name)
