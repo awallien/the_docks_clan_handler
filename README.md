@@ -28,7 +28,7 @@ PS > .\run.ps1 --cli [--bot]
 ### (Linux Based)
 #### Running the CLI, Bot or Both
 ```
-Not Supported. (Coming soon.)
+$ ./run.sh --cli [--bot]
 ```
 
 Note that running these scripts will also generate the needed OSRS metadata files:
