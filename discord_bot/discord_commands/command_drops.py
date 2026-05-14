@@ -11,8 +11,13 @@ if TYPE_CHECKING:
     from app import TheDocksDiscordBot
 
 MAX_EMBED_FIELDS = 25
-GP_VALUE_RE = re.compile(r"([\d,.]+[kKmM]?)\s*gp")
-ITEMS_DESC_RE = re.compile(r"\d+\s*x\s*\[(.*?)\]\(.*?\)\s*\((\d+)\)")
+GP_VALUE_RE = re.compile(r"([\d,.]+[kKmMbB]?)\s*gp")
+ITEMS_DESC_RE = re.compile(r"\d+\s*x\s*\[(.*?)\]\(.*?\)\s*\(([\d,.]+[kKmMbB]?)\)")
+GP_MULTIPLIER = {
+    "K": 1_000,
+    "M": 1_000_000,
+    "B": 1_000_000_000
+}
 
 def supported_spaces(bot: "TheDocksDiscordBot") -> Dict[str, discord.abc.Messageable]:
     return {
@@ -64,14 +69,15 @@ def _make_embeds(bot: "TheDocksDiscordBot",
         for idx, (player, drops) in enumerate(players_drops.items(), start=1):
             total_gp = int(drops.total_gp)
             mvd = drops.mvd
-            mvd_stat = drops.items[mvd]
+            mvd_stat = drops.items.get(mvd, ItemStats())
             num_clogs = drops.num_clogs
-            
+            mvd_label = f"{mvd_stat.count}x {mvd}" if mvd else "None"
+
             embed.add_field(
                 name=player,
                 value=f"> **Accumulated GP**: {format(total_gp, ',')}gp\n"
-                      f"> **Most Valuable Drop (MVD)**: {mvd_stat.count}x {mvd}\n"
-                      f"> **MVD Value**: {int(format(mvd_stat.value, ','))}gp\n"
+                      f"> **Most Valuable Drop (MVD)**: {mvd_label}\n"
+                      f"> **MVD Value**: {format(int(mvd_stat.value), ',')}gp\n"
                       f"> **MVD Percentage¹**: {_mvd_percentage(total_gp, mvd_stat.value)}\n"
                       f"> **Number of CLogs**: {num_clogs}\n",
                 inline = False
@@ -87,23 +93,19 @@ def _make_embeds(bot: "TheDocksDiscordBot",
     return embeds
 
 def _parse_gp_value(line: str):
-    gp_value = 0
-    if 'K' in line:
-        gp_value = float(line.replace("K", "")) * 1000
-    elif 'M' in line:
-        gp_vlaue = float(line.replace("M", "")) * 1000000
-    elif 'B' in line:
-        gp_value = float(line.replace("B", "")) * 1000000000
-    else:
-        gp_value = float(line)
-    return gp_value
+    value = line.replace(",", "").strip()
+    suffix = value[-1:].upper()
+    multipler = GP_MULTIPLIER.get(suffix, 1)
+    if suffix in GP_MULTIPLIER:
+        value = value[:-1]
+    return float(value) * multipler
 
 def _parse_drop_embed(embed: discord.Embed):    
     gp_value = 0
     items_stats: Dict[str, ItemStats] = dict()
 
     # description contains the big value item
-    for item, value in ITEMS_DESC_RE.findall(embed.description):
+    for item, value in ITEMS_DESC_RE.findall(embed.description or ""):
         items_stats[item] = items_stats.get(item, ItemStats())
         items_stats[item].count += 1
         items_stats[item].value += _parse_gp_value(value)

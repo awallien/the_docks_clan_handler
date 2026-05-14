@@ -142,7 +142,7 @@ async def _process_spin_images(interaction: discord.Interaction,
     winner_file = f"winner_{hash(str(chosen_frame))}.png"
     winner_embed = (
         discord.Embed(title="🎉 Winner!", color=discord.Color.yellow())
-        .set_image(url=f"attachment:///{winner_file}")
+        .set_image(url=f"attachment://{winner_file}")
         .add_field(name="**Options**", value=options_text, inline=False)
     )
 

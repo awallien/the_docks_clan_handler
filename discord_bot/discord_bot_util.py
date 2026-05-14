@@ -5,7 +5,7 @@ from typing import List
 
 from discord import Embed, Color
 from entity import ClanMemberRank
-from service import rank_service
+from services import rank_service
 from util import Skill, Hiscore
 from resources import RANK_ICONS_JSON_PATH
 
@@ -33,7 +33,7 @@ skills_initials = {
 	"runecrafting": "rc",
 	"hunter": "hnt",
 	"construction": "con",
-	"sailing": "sai",
+	"sailing": "sal",
 }
 
 

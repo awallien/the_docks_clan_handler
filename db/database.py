@@ -1,9 +1,13 @@
 import sqlite3
 import time
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 
-
+@dataclass(frozen=True)
+class ExecuteResult:
+    lastrowid: int
+    rowcount: int
 
 class Database:
     DB_CACHE_PATH = Path(__file__).parent.resolve() / "db_cache"
@@ -62,7 +66,7 @@ class Database:
                     cursor = conn.cursor()
                     cursor.execute(query, params)
                     conn.commit()
-                    return cursor
+                    return ExecuteResult(cursor.lastrowid, cursor.rowcount)
 
             except sqlite3.OperationalError as e:
                 last_error = e

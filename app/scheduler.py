@@ -46,7 +46,7 @@ async def clan_db_schdeduler(container: Container, delay: int=3600, init_delay: 
             #         name,
             #         data
             #     )
-            raise
+            pass
         except Exception as e:
             print(f"[Scheduler Error] {e}")
             return

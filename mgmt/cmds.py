@@ -31,7 +31,7 @@ COMMAND_SPECS: Tuple[CommandSpec, ...] = (
         name="/um",
         usage="/um member=... [key=value ...]",
         description="Update a clan member's info in clan DB",
-        handler="cmd_cm",
+        handler="cmd_um",
     ),
     CommandSpec(
         name="/dm",

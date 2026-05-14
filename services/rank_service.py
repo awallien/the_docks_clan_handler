@@ -80,7 +80,7 @@ class RankService:
             return left_val <= max_avg <= right_val
         
         def chk_avg_range_and(left_val, right_val, new_non_cmb_avg=None):
-            global non_cmb_avg
+            nonlocal non_cmb_avg
             if new_non_cmb_avg:
                 non_cmb_avg = new_non_cmb_avg
             return ((left_val <= cmb_avg <= right_val) and

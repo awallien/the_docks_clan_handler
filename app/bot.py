@@ -23,8 +23,10 @@ class TheDocksDiscordBot(commands.Bot):
     def _init_logging(self):
         logging.getLogger("discord").setLevel(logging.DEBUG)
         logging.getLogger('discord.http').setLevel(logging.INFO)
+        logs_dir = Path(__file__).resolve().parent.parent / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
         handler = RotatingFileHandler(
-            filename=os.path.join(Path(__file__).resolve().parent.parent, "logs", "discord.log"),
+            filename=logs_dir / "discord.log",
             encoding='utf-8',
             maxBytes=10 * 1024 * 1024,  # 10 MiB
             backupCount=5,
@@ -82,7 +84,7 @@ class TheDocksDiscordBot(commands.Bot):
                 print(e)
             print(f"'{self.user}' is connected to Guild(id:{self.guild.id})")
         else:
-            self.close()
+            await self.close()
             if not self.guild:
                 raise ClientException(f"{self.user} is not connected to designated guild!")
             else:
@@ -94,12 +96,11 @@ class TheDocksDiscordBot(commands.Bot):
                 embed=dbu.info_embed(
                     msg=(
                         f"Hey {member.mention}, welcome to the server! I'm **Docksy**, here to help you get settled. "
-                        "Take a look around, say hi to everyone, and don’t forget to grab some snacks at the snack table over there. "
+                        "Take a look around, and say hi to everyone! "
                         "When you're ready, type `/docks docs` to check out some helpful info to get started."
                     ),
                     title="Welcome to the server! 👋"
-                ),
-                ephemeral=True
+                )
             )
 
     async def on_command_error(self, ctx, exception):

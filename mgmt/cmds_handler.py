@@ -1,6 +1,5 @@
-from typing import List, Any, Dict, Optional, Set
+from typing import List, Any, Dict, Set
 from datetime import datetime, timezone
-from dataclasses import dataclass
 
 from container import Container
 from entity import ClanMemberRank
@@ -20,7 +19,7 @@ class CommandSpecsHandler:
         """Parse key=value tokens into payload"""
         payload: Dict[str, Any] = {}
         for token in tokens:
-            if "=" not in tokens:
+            if "=" not in token:
                 raise CommandSpecsArgsException(f"Expected key=value token, got '{token}'")
             key, value = token.split("=", 1)
             key = key.strip()
@@ -36,13 +35,13 @@ class CommandSpecsHandler:
         if missing_args:
             raise CommandSpecsArgsException(f"Missing required arguments: {missing_args}")
 
-    def _dt_to_ts(date: str):
-        dt = datetime.fromisoformat("2024-01-01").replace(tzinfo=timezone.utc)
-        return int(dt.timestamp())
+    @staticmethod
+    def _dt_to_ordinal(date: str):
+        return datetime.fromisoformat(date).toordinal()
 
-    def _ts_to_dt(timestamp: int):
-        dt = datetime.fromtimestamp(float(timestamp), tz=timezone.utc)
-        return dt.strftime("%Y-%m-%d")
+    @staticmethod
+    def _ordinal_to_dt(ordinal: int):
+        return datetime.fromordinal(int(ordinal)).strftime("%Y-%m-%d")
 
     def cmd_cm(self, tokens: List[str], **args):
         """Ex: /cm member=new_member joined_date=2021-01-01 rank=1"""
@@ -52,12 +51,12 @@ class CommandSpecsHandler:
         self._check_missing_args(required_args, payload)
 
         member = payload["member"]
-        joined_date = self._dt_to_ts(payload["joined_date"])
+        joined_date = self._dt_to_ordinal(payload["joined_date"])
         
         rank = payload.get("rank", ClanMemberRank.RANK_1)
 
         last_row_id = self._clan_service.create_member(
-            member = member,
+            name = member,
             joined_date = joined_date,
             rank = rank,
         )
@@ -102,5 +101,5 @@ class CommandSpecsHandler:
         if len(members) == 1:
             return self._clan_service.delete_member(members[0])
         else:
-            return self._clan_service.delete_members()
+            return self._clan_service.delete_members(members)
         

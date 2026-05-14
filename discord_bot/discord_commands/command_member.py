@@ -16,20 +16,20 @@ async def _new_member(bot: "TheDocksDiscordBot",
                       interaction: discord.Interaction,
                       member: str,
                       **kwargs):
-    await bot.mod.send(f"New member add: {member}, called by {interaction.message.author}")
+    await bot.mod.send(f"New member add: {member}, called by {interaction.user}")
 
 async def _delete_member(bot: "TheDocksDiscordBot",
                          interaction: discord.Interaction,
                          member: str,
                          **kwargs):
-    await bot.mod.send(f"Member delete: {member}, called by {interaction.message.author}")
+    await bot.mod.send(f"Member delete: {member}, called by {interaction.user}")
 
 async def _update_member(bot: "TheDocksDiscordBot",
                          interaction: discord.Interaction,
                          member: str,
                          **kwargs):
     if (name_change := kwargs.get("name_change")):
-        await bot.mod.send(f"Update member {member} to name change {name_change}, called by {interaction.message.author}")
+        await bot.mod.send(f"Update member {member} to name change {name_change}, called by {interaction.user}")
 
 async def _clan_stats_member(bot: "TheDocksDiscordBot",
                              interaction: discord.Interaction,
@@ -93,6 +93,6 @@ async def discord_bot_command_member(bot: "TheDocksDiscordBot",
 
 async def discord_bot_command_challenge(bot: "TheDocksDiscordBot",
                                         interaction: discord.Interaction):
-    caller = interaction.message.author
+    caller = interaction.user
     await interaction.response.send_message(content="Request sent to Goose. Please allow 1-2 days for Goose to get back to you with a spicy challenge.")
     bot.mod.send(f"{caller} requests a challenge :)")

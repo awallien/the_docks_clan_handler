@@ -1,10 +1,11 @@
 import asyncio
 import argparse
 
-from app import DocksClanCLI, BOT, clan_db_schdeduler
+from app import DocksClanCLI, clan_db_schdeduler
 from container import Container
 from db import Database, init_schema
 
+BOT = None
 stop_event = asyncio.Event()
 
 async def run_cli(container):
@@ -34,6 +35,8 @@ async def main():
         tasks.append(asyncio.create_task(run_cli(container)))
         
     if args.bot:
+        global BOT
+        from app.bot import BOT
         tasks.append(asyncio.create_task(BOT.run(container)))
     
     try:
@@ -41,7 +44,7 @@ async def main():
         await stop_event.wait()
     finally:
         print("Shutting down...")
-        if args.bot:
+        if BOT is not None:
             await BOT.close()
         for task in tasks:
             task.cancel()

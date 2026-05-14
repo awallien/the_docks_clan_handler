@@ -22,3 +22,13 @@ class ClanMetricRepository(BaseRepository):
             ON CONFLICT(clan_id, {self.id_column})
             DO UPDATE SET {value_column} = {value_column} + ?
         """, (clan_id, ref_id, amount, amount))
+
+    def list_by_clan(self, clan_id):
+        return self.fetch_all(
+            f"""
+            SELECT *
+            FROM {self.table}
+            WHERE clan_id = ?
+            """,
+            (clan_id,),
+        )

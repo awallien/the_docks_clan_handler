@@ -30,6 +30,12 @@ PS > .\run.ps1 --cli [--bot]
 ```
 Not Supported. (Coming soon.)
 ```
+
+Note that running these scripts will also generate the needed OSRS metadata files:
+- `util/osrs_api/bosses.py`
+- `util/osrs_api/skills.py`
+- `util/osrs_api/activities.py`
+
 ---
 
 ## Configuration

@@ -23,16 +23,16 @@ class ClanService:
             raise ValueError("Member not found")
         return member
     
-    def get_members(self, mambers: List[str]) -> List[ClanMember]:
+    def get_members(self, members: List[str]) -> List[ClanMember]:
         members = self.clan_repo.get_members(members)
         return members
 
     def list_members(self) -> List[ClanMember]:
         return self.clan_repo.list_all()
 
-    def delete_member(self, name) -> bool:
+    def delete_member(self, name) -> int:
         member = self.get_member(name)
-        self.clan_repo.delete(member["id"])
+        return self.clan_repo.delete(member["id"])
 
-    def delete_members(self, members: List[str]) -> bool:
+    def delete_members(self, members: List[str]) -> int:
         return self.clan_repo.delete_members(members)
