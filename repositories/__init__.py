@@ -1,3 +1,8 @@
+# Base repositories
+from .base.base_repo import BaseRepository
+from .base.named_repo import NamedRepository
+from .base.clan_metric_repo import ClanMetricRepository
+
 # Core repositories
 from .clan_repo import ClanRepository
 from .skill_repo import SkillRepository

@@ -1,4 +1,4 @@
-from typing import List, Self
+from typing import List
 from meta import AutoConstantsMeta
 
 class ClanMemberRank(metaclass=AutoConstantsMeta):
@@ -29,21 +29,21 @@ class ClanMemberRank(metaclass=AutoConstantsMeta):
         return cls.__constants__
 
     @classmethod
-    def activeness_ranks(cls) -> List[Self]:
+    def activeness_ranks(cls) -> List[str]:
         return cls.__constants__[1:5]
     
     @classmethod
-    def achievement_ranks(cls) -> List[Self]:
+    def achievement_ranks(cls) -> List[str]:
         return cls.__constants__[5:16]
     
     @classmethod
-    def special_rank(cls) -> List[Self]:
-        return list(cls.__constants__[16])
+    def special_rank(cls) -> List[str]:
+        return [cls.RANK_16]
     
     @classmethod
-    def honorable_ranks(cls) -> List[Self]:
+    def honorable_ranks(cls) -> List[str]:
         return cls.__constants__[17:25]
         
     @classmethod
-    def administrative_ranks(cls) -> List[Self]:
-        return cls.__constants__[26:29]
+    def administrative_ranks(cls) -> List[str]:
+        return [cls.RANK_A, cls.RANK_D, cls.RANK_O]

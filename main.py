@@ -9,9 +9,12 @@ BOT = None
 stop_event = asyncio.Event()
 
 async def run_cli(container):
-    await asyncio.to_thread(
-        lambda: DocksClanCLI(container).run()
-    )
+    try:
+        return await asyncio.to_thread(
+            lambda: DocksClanCLI(container).run()
+        )
+    finally:
+        stop_event.set()
 
 async def main():
     parser = argparse.ArgumentParser(description="Docks Clan App")
@@ -23,7 +26,6 @@ async def main():
 
     if not (args.cli or args.bot):
         parser.error("At least one of --cli or --bot must be specified.")
-        exit(1)
 
     db = Database("clan.db")
     init_schema(db)

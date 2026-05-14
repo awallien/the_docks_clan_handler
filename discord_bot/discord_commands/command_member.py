@@ -25,19 +25,38 @@ async def _new_member(bot: "TheDocksDiscordBot",
                       member: str,
                       **kwargs):
     await bot.mod.send(f"New member add: {member}, called by {interaction.user}")
+    await interaction.response.send_message(
+        embed=EmbedUtil.info_embed(f"Sent new-member request for {member}."),
+        ephemeral=True,
+    )
 
 async def _delete_member(bot: "TheDocksDiscordBot",
                          interaction: discord.Interaction,
                          member: str,
                          **kwargs):
     await bot.mod.send(f"Member delete: {member}, called by {interaction.user}")
+    await interaction.response.send_message(
+        embed=EmbedUtil.info_embed(f"Sent delete-member request for {member}."),
+        ephemeral=True,
+    )
 
 async def _update_member(bot: "TheDocksDiscordBot",
                          interaction: discord.Interaction,
                          member: str,
                          **kwargs):
-    if (name_change := kwargs.get("name_change")):
-        await bot.mod.send(f"Update member {member} to name change {name_change}, called by {interaction.user}")
+    name_change = kwargs.get("name_change")
+    if not name_change:
+        await interaction.response.send_message(
+            embed=EmbedUtil.error_embed("No update details were provided."),
+            ephemeral=True,
+        )
+        return
+    
+    await bot.mod.send(f"Update member {member} to name change {name_change}, called by {interaction.user}")
+    await interaction.response.send_message(
+        embed=EmbedUtil.info_embed(f"Sent update request for {member}."),
+        ephemeral=True,
+    )
 
 async def _clan_stats_member(bot: "TheDocksDiscordBot",
                              interaction: discord.Interaction,
@@ -87,7 +106,12 @@ async def discord_bot_command_member(bot: "TheDocksDiscordBot",
                                      **kwargs):
     handler = clan_member_options.get(option)
     if handler is None:
-        await bot.mod.send(f"Error: Unsupported option in discord bot command member: {option}")
+        err_msg = f"Unsupported option in discord bot command member: {option}"
+        await bot.mod.send(f"Error: {err_msg}")
+        await interaction.response.send_message(
+            embed=EmbedUtil.error_embed(err_msg),
+            ephemeral=True,
+        )
         return
     await handler(bot=bot, interaction=interaction, member=member, **kwargs)
 
