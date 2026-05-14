@@ -1,5 +1,5 @@
 from typing import List, Any, Dict, Set
-from datetime import datetime, timezone
+from datetime import datetime
 
 from container import Container
 from entity import ClanMemberRank
@@ -31,7 +31,7 @@ class CommandSpecsHandler:
 
     @staticmethod
     def _check_missing_args(required_args: Set, payload: Dict):
-        missing_args = required_args - payload
+        missing_args = required_args - payload.keys()
         if missing_args:
             raise CommandSpecsArgsException(f"Missing required arguments: {missing_args}")
 
@@ -61,7 +61,7 @@ class CommandSpecsHandler:
             rank = rank,
         )
 
-        return last_row_id
+        return f"Created member {member} with id {last_row_id}"
 
     def cmd_rm(self, tokens: List[str], **args):
         """Ex: /rm [member1 member2]"""
@@ -75,7 +75,7 @@ class CommandSpecsHandler:
         if not members:
             raise CommandSpecsArgsException("Unable to find any members.")
 
-        return members 
+        return [dict(member) for member in members] 
 
 
     def cmd_um(self, tokens: List[str], **args):
@@ -85,11 +85,15 @@ class CommandSpecsHandler:
 
         self._check_missing_args(required_args, payload)
 
-        member = payload["member"]
-        if not len(payload) > 1:
+        member = payload.pop("member")
+        if not payload:
             raise CommandSpecsArgsException(f"No values to update for member {member}")
 
+        for date_field in {"joined_date", "last_rank_date"} & payload.keys():
+            payload[date_field] = self._dt_to_ordinal(payload[date_field])
 
+        updated = self._clan_service.update_member(member, payload)
+        return f"Updated {updated} member(s)"
 
 
     def cmd_dm(self, tokens: List[str], **args):

@@ -1,14 +1,14 @@
 from typing import List
 
 from entity import ClanMember
-from repositories import ClanRepository
+from repositories.clan_repo import ClanRepository, ClanUpdateValues
 
 
 class ClanService:
     def __init__(self, clan_repo):
         self.clan_repo: ClanRepository = clan_repo
 
-    def create_member(self, name, joined_date=None, rank=None) -> bool:
+    def create_member(self, name, joined_date=None, rank=None) -> int:
         if not name or len(name) < 2:
             raise ValueError("Invalid name")
 
@@ -29,6 +29,10 @@ class ClanService:
 
     def list_members(self) -> List[ClanMember]:
         return self.clan_repo.list_all()
+    
+    def update_member(self, name: str, values: ClanUpdateValues) -> int:
+        self.get_member(name)
+        return self.clan_repo.update_by_name(name, values)
 
     def delete_member(self, name) -> int:
         member = self.get_member(name)

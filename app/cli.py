@@ -129,6 +129,7 @@ class DocksClanCLI:
 
             if raw in {"/clear", "clear"}:
                 self._console.clear()
+                continue
 
             if not raw.startswith("/"):
                 self._warn("Commands must start with '/'. Type /help for usage.")
@@ -137,6 +138,17 @@ class DocksClanCLI:
             self._dispatch(raw)
         
         return 0
+    
+    def _print_response(self, resp) -> None:
+        if resp is None:
+            self._warn("Command completed with no output.")
+        
+        elif isinstance(resp, list):
+            for item in resp:
+                self._console.print(dict(item) if hasattr(item, "keys") else item)
+        
+        else:
+            self._ok(str(resp))
 
     def _dispatch(self, raw: str) -> None:
         """Handles raw input from the user"""
@@ -162,9 +174,6 @@ class DocksClanCLI:
 
         try:
             resp = handler(args)
-            if resp:
-                self._ok(resp.msg)
-            else:
-                self._error(resp.msg)
+            self._print_response(resp)
         except Exception as exc:
             self._error(f"Command failed: {exc}")

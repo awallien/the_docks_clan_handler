@@ -1,6 +1,7 @@
 {
   "uri_path": "https://oldschool.runescape.wiki/images/Clan_icon_-_",
   "ranks": [
+    {"rank": "default", "icon_path": "Clan_icon_-_Guest.png?4122f"},
     { "rank": "1", "icon_path": "Gnome_Child.png?b0561" },
     { "rank": "2", "icon_path": "Kitten.png?9dc78" },
     { "rank": "3", "icon_path": "Short_Green_Guy.png?b0561" },

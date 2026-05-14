@@ -4,9 +4,9 @@ from collections import OrderedDict
 from enum import Enum, verify, UNIQUE
 from http import HTTPStatus
 
-from .skills import *
-from .activities import *
-from .bosses import *
+from .skills import SKILLS, Skills
+from .activities import ACTIVITIES, Activities
+from .bosses import BOSSES, Bosses
 
 HISCORE_API_URL_FMT = "https://secure.runescape.com/m=hiscore_oldschool%s/index_lite.ws?player=%s"
 

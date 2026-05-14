@@ -1,5 +1,12 @@
+from typing import NotRequired, TypedDict
+
 from db import Database
 
+class ClanUpdateValues(TypedDict, total=False):
+    member: NotRequired[str]
+    joined_date: NotRequired[int]
+    rank: NotRequired[str]
+    last_rank_date: NotRequired[int]
 
 class ClanRepository:
     def __init__(self, db: Database):
@@ -35,6 +42,24 @@ class ClanRepository:
 
     def list_all(self):
         return list(self.db.fetch_all("SELECT * FROM clan"))
+    
+    def update_by_name(self, member: str, values: ClanUpdateValues) -> int:
+        allowed_fields = set(ClanUpdateValues.__annotations__)
+        unknown_fields = set(values) - allowed_fields
+
+        if unknown_fields:
+            raise ValueError(f"Unsupported clan fields: {sorted(unknown_fields)}")
+        
+        if not values:
+            return 0
+        
+        assignments = ", ".join(f"{field} = ?" for field in values)
+        params = tuple(values.values()) + (member, )
+        result = self.db.execute(
+            f"UPDATE clan SET {assignments} where MEMBER = ?",
+            params,
+        )
+        return result.rowcount
 
     def delete_members(self, members):
         placeholders = ",".join("?" for _ in members)

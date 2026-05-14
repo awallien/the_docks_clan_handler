@@ -111,9 +111,9 @@ def _parse_drop_embed(embed: discord.Embed):
         items_stats[item].value += _parse_gp_value(value)
 
     # fields contain the gp value
-    for field in embed.fields:
-        if field.name == "Total Value":
-            gp_value_search = GP_VALUE_RE.search(field.value)
+    for embed_field in embed.fields:
+        if embed_field.name == "Total Value":
+            gp_value_search = GP_VALUE_RE.search(embed_field.value)
             if gp_value_search:
                 gp_value_str = gp_value_search.group(1).replace(",", "")
                 gp_value += _parse_gp_value(gp_value_str)
@@ -149,13 +149,13 @@ async def discord_bot_command_drops(bot: "TheDocksDiscordBot",
                                     member: str=None):
     if not member and not interaction.user == bot.mod:
         await interaction.response.send_message(
-            embed=EmbedUtil.error_embed(f"Sorry, only Goose is allowed not to specify a player.", title="Please specify a member."),
+            embed=EmbedUtil.error_embed("Please specify a member."),
             ephemeral=True
         )
         return
     
     await interaction.response.defer(ephemeral=False)
-    await interaction.edit_original_response(content=f"*One sec, I'm chugging very hard...*")
+    await interaction.edit_original_response(content="*One sec, I'm chugging very hard...*")
 
     delta = (discord.utils.utcnow() - timedelta(days=historical_days)).replace(tzinfo=timezone.utc)
     players_drops: Dict[str, PlayerDrops] = dict()

@@ -3,7 +3,16 @@ import discord
 from discord import app_commands, Interaction
 from discord.ext import commands
 
-from discord_bot import *
+from discord_bot import (
+    DiscordBotCommandMemberOptions,
+    EmbedUtil,
+    discord_bot_command_challenge,
+    discord_bot_command_docs,
+    discord_bot_command_drops,
+    discord_bot_command_member,
+    discord_bot_command_spin,
+    discord_bot_leagues_board,
+)
 from .config import settings
 
 from typing import TYPE_CHECKING
@@ -29,7 +38,7 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
         elif isinstance(error, app_commands.errors.NoPrivateMessage):
             await interaction.response.send_message(
                 embed = EmbedUtil.error_embed(
-                    "Oops! My commands don’t work in DMs — try again in one of the designated servers!"
+                    "Oops! My commands don’t work in DMs — try again in one of the designated servers!",
                     "Trying to slide into my DMs?"
                 )
             )

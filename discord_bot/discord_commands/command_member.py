@@ -11,6 +11,14 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app import TheDocksDiscordBot
 
+def _format_ordinal(value):
+    if not value:
+        return "Unknown"
+    try:
+        return datetime.fromordinal(int(value)).strftime("%m-%d-%Y")
+    except (TypeError, ValueError):
+        return "Unknown"
+
 
 async def _new_member(bot: "TheDocksDiscordBot",
                       interaction: discord.Interaction,
@@ -38,41 +46,31 @@ async def _clan_stats_member(bot: "TheDocksDiscordBot",
     # Defer in case hiscore is needed
     await interaction.response.defer(ephemeral=True)
 
-    clan_stats = None
-    
-    if not clan_stats:
+    try:
+        clan_stats = bot.container.clan_service().get_member(member)
+    except ValueError:
         await interaction.edit_original_response(embed=EmbedUtil.error_embed(msg=f"Member '{member}' not found in the clan system."))
         return
     
     embed = discord.Embed(
-        title = member,
-        color=discord.Color.blue()
+        title=member,
+        color=discord.Color.blue(),
     )
 
-    rank = clan_stats.rank
-    joined_date = datetime.fromordinal(clan_stats.joined_date).strftime("%m-%d-%Y")
-    total_xp = clan_stats.total_xp
-    last_rank_date = datetime.fromordinal(clan_stats.last_rank_date).strftime("%m-%d-%Y")
-
-    footer_note = ""
-    if total_xp < 0:
-        total_xp = "**-1 xp"
-        footer_note = "**Total XP is not available in OSRS Hiscores since last rank date, or clan member has just joined the clan"
+    rank = clan_stats.get("rank") or "Unknown"
+    joined_date = _format_ordinal(clan_stats.get("joined_date"))
+    last_rank_date = _format_ordinal(clan_stats.get("last_rank_date"))
 
     embed.set_thumbnail(url=RankUtil.get_rank_icon_url(rank))
     (
         embed.add_field(name="Rank", value=rank, inline=True)
         .add_field(name="Joined Date", value=joined_date, inline=True)
-        .add_field(name="Total XP", value=f"{total_xp} xp", inline=True)
         .add_field(name="Last Rank Date", value=last_rank_date, inline=True)
     )
 
-    if kwargs["verbose"]:
-        detail_stats = RankUtil.get_skill_stats(member, rank, clan_stats.joined_date)
+    if kwargs.get("verbose"):
+        detail_stats = RankUtil.get_skill_stats(member, rank, clan_stats.get("joined_date"))
         embed.add_field(name="\"Hidden\" Stats", value=detail_stats, inline=False)
-
-    if footer_note:
-        embed.set_footer(text=footer_note)
 
     await interaction.edit_original_response(embed=embed)
 
@@ -87,12 +85,14 @@ async def discord_bot_command_member(bot: "TheDocksDiscordBot",
                                      option: int,
                                      member: str,
                                      **kwargs):
-    if option not in clan_member_options:
-        await bot.mod.send(f"Error: Unsupported option in discort bot command member: {option}")
-    await clan_member_options[option](bot=bot, interaction=interaction, member=member, **kwargs)
+    handler = clan_member_options.get(option)
+    if handler is None:
+        await bot.mod.send(f"Error: Unsupported option in discord bot command member: {option}")
+        return
+    await handler(bot=bot, interaction=interaction, member=member, **kwargs)
 
 async def discord_bot_command_challenge(bot: "TheDocksDiscordBot",
                                         interaction: discord.Interaction):
     caller = interaction.user
     await interaction.response.send_message(content="Request sent to Goose. Please allow 1-2 days for Goose to get back to you with a spicy challenge.")
-    bot.mod.send(f"{caller} requests a challenge :)")
+    await bot.mod.send(f"{caller} requests a challenge :)")

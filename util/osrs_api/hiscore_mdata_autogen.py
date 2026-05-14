@@ -1,4 +1,3 @@
-import pathlib
 import re
 import os
 
@@ -39,7 +38,7 @@ def make_get_function(mdata_list):
 f"""    def get(self, key):
         def __convert_to_var_name(name):
             alnum_only = "".join([c.lower() for c in name if c.isalnum() or c.isspace()])
-            remove_dup_spaces = re.sub(r'\s+', '_', alnum_only)
+            remove_dup_spaces = re.sub(r'\\s+', '_', alnum_only)
             return "_"+remove_dup_spaces.strip()
         if key not in {mdata_list}:
             return None

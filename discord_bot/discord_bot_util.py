@@ -73,7 +73,7 @@ class RankUtil:
         cls._load_data()
         
         if rank not in cls._rank_to_icon:
-            raise NotImplementedError(f"Rank {rank} icon does not exist")
+            return cls._rank_to_icon["default"]
         return cls._rank_to_icon[rank]
     
     @classmethod
@@ -82,7 +82,7 @@ class RankUtil:
         try:
             hiscore = Hiscore(member)
             skills = hiscore.skills
-        except Exception as e:
+        except Exception:
             hiscore = None
         
         next_rank = rank_service.get_next_rank(hiscore, rank, joined_date)
