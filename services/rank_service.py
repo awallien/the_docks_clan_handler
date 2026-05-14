@@ -32,7 +32,9 @@ class RankService:
     @classmethod
     def get_next_rank(cls, hiscore_data: Hiscore, current_rank: ClanMemberRank, current_joined_date: int) -> str:
         """Given the clan member's current, check and return the next rank"""       
-        assert not current_rank == ClanMemberRank.RANK_INVALID, "Clan member's rank is invalid"
+        if current_rank == ClanMemberRank.RANK_INVALID:
+            raise ValueError("Clan member's rank is invalid")
+
         if ((current_rank == ClanMemberRank.RANK_15) or
             (current_rank in ClanMemberRank.honorable_ranks()) or
             (current_rank in ClanMemberRank.administrative_ranks())):
@@ -59,7 +61,11 @@ class RankService:
         Promotion to next active rank - being in the clan for the next month
         Timezone isn't tracked with the joined date, so a tolerance is provided
         """
-        days_diff = abs(datetime.now().date() - datetime.fromordinal(joined_date).date()).days
+        joined = datetime.fromordinal(joined_date).date()
+        days_diff = (datetime.now().date() - joined).days
+
+        if days_diff < 0:
+            return False
 
         min_tolerance = cls.DAYS_PER_MONTH - cls.TOLERANCE_DAYS
         max_tolerance = cls.DAYS_PER_MONTH + cls.TOLERANCE_DAYS

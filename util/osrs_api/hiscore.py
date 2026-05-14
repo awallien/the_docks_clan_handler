@@ -3,12 +3,14 @@ import requests
 from collections import OrderedDict
 from enum import Enum, verify, UNIQUE
 from http import HTTPStatus
+from urllib.parse import quote
 
 from .skills import SKILLS, Skills
 from .activities import ACTIVITIES, Activities
 from .bosses import BOSSES, Bosses
 
 HISCORE_API_URL_FMT = "https://secure.runescape.com/m=hiscore_oldschool%s/index_lite.ws?player=%s"
+HISCORE_REQUEST_TIMEOUT = 30
 
 @verify(UNIQUE)
 class AccountTypes(Enum):
@@ -37,7 +39,7 @@ class Hiscore:
         self.__fetch_user_data()
 
     def __set_url(self):
-        self._url = HISCORE_API_URL_FMT % (self.account_type.value, self.username)
+        self._url = HISCORE_API_URL_FMT % (self.account_type.value, quote(self.username))
 
     def __parse_user_data(self, content):
         idx = 0
@@ -65,7 +67,7 @@ class Hiscore:
             print(f"Only parsed {idx}/{len(content_fields)} of user hiscore data. Please check for any errors or API modifications on runescape wiki.", file=sys.stderr)
 
     def __fetch_user_data(self):
-        response = requests.get(url=self._url)
+        response = requests.get(url=self._url, timeout=HISCORE_REQUEST_TIMEOUT)
         if response.status_code == HTTPStatus.OK:
             self.__parse_user_data(response.content.decode())
         else:

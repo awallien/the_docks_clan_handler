@@ -16,6 +16,14 @@ async def run_cli(container):
     finally:
         stop_event.set()
 
+async def run_bot(container):
+    global BOT
+    from app.bot import BOT
+    try:
+        await BOT.run(container)
+    finally:
+        stop_event.set()
+
 async def main():
     parser = argparse.ArgumentParser(description="Docks Clan App")
     parser.add_argument('--cli', action='store_true', help='Enable CLI mode')
@@ -37,9 +45,7 @@ async def main():
         tasks.append(asyncio.create_task(run_cli(container)))
         
     if args.bot:
-        global BOT
-        from app.bot import BOT
-        tasks.append(asyncio.create_task(BOT.run(container)))
+        tasks.append(asyncio.create_task(run_bot(container)))
     
     try:
         # Wait until stop_event is triggered (via CLI exit or KeyboardInterrupt)
