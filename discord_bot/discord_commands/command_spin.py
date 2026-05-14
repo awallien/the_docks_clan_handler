@@ -8,7 +8,6 @@ from typing import List
 from discord_bot import EmbedUtil
 from resources import CHAT_BG, OSRS_FONT
 
-invalid_param_msg = ""
 DELIMITER = ";"
 MAX_OPT_LEN = 20
 MAX_WEIGHT = 1000000
@@ -19,36 +18,29 @@ def _validate_params(weight_fields: List[str], opt_len: int):
     :Note: weight_fields are changed in this function to convert from
             str to int
     """
-    global invalid_param_msg
     weights_len = len(weight_fields)
 
     if opt_len < 2:
-        invalid_param_msg = "Add a few more options — at least 2 are required."
-        return False
+        return False, "Add a few more options — at least 2 are required."
 
     if opt_len > MAX_OPT_LEN:
-        invalid_param_msg = f"Woah there! That's too many options for me (I can support up to 20 options, counted {opt_len})."
-        return False
+        return False, f"Woah there! That's too many options for me (I can support up to 20 options, counted {opt_len})."
 
     if weights_len > 0 and not weights_len == opt_len:
-        invalid_param_msg = f"Number of weights ({weights_len}) do not match the number of options ({opt_len})."
-        return False
+        return False, f"Number of weights ({weights_len}) do not match the number of options ({opt_len})."
     
     for idx, weight in enumerate(weight_fields):
         if not weight.isnumeric():
-            invalid_param_msg = f"Invalid weight: {weight}. I only support weights between 1 and {MAX_WEIGHT} (no commas please!)"
-            return False
+            return False, f"Invalid weight: {weight}. I only support weights between 1 and {MAX_WEIGHT} (no commas please!)"
 
         weight = int(weight)
         weight_fields[idx] = weight
         if weight == 0:
-            invalid_param_msg = f"Ummm... I cannot divide by zero. (Got weight {weight})"
-            return False
+            return False, f"Ummm... I cannot divide by zero. (Got weight {weight})"
         elif weight > MAX_WEIGHT:
-            invalid_param_msg = f"Oof, I can't carry this weight! My max lift is {MAX_WEIGHT}, got {weight}"
-            return False
+            return False, f"Oof, I can't carry this weight! My max lift is {MAX_WEIGHT}, got {weight}"
         
-    return True
+    return True, ""
 
 def _convert_weights(weights: List[int],
                      randomize_weights: bool,
@@ -159,9 +151,11 @@ async def discord_bot_command_spin(interaction: discord.Interaction,
     opt_len = len(opt_fields)
     weight_fields = [weight.strip() for weight in weights.split(DELIMITER) if weight.strip()]
 
-    if not _validate_params(weight_fields, opt_len):
+    is_valid, invalid_param_msg = _validate_params(weight_fields, opt_len)
+    if not is_valid:
         await interaction.response.send_message(
-            embed=EmbedUtil.error_embed(invalid_param_msg)
+            embed=EmbedUtil.error_embed(invalid_param_msg),
+            ephemeral=True,
         )
         return
 
