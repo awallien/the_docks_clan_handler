@@ -41,6 +41,7 @@ COMMAND_SPECS: Tuple[CommandSpec, ...] = (
     ),
 
     # Internal help, exit, quit
+    CommandSpec(name="/rf", usage="/rf </path/to/cmd-file>", description="File of commands to pass to execute in CLI"),
     CommandSpec(name="/help", usage="/help", description="Show help"),
     CommandSpec(name="/exit", usage="/exit", description="Exit CLI"),
     CommandSpec(name="/quit", usage="/quit", description="Exit CLI"),

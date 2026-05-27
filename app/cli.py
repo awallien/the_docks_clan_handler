@@ -150,7 +150,7 @@ class DocksClanCLI:
         else:
             self._ok(str(resp))
 
-    def _dispatch(self, raw: str) -> None:
+    def _dispatch(self, raw: str, in_cmd_file: bool = False) -> None:
         """Handles raw input from the user"""
 
         try:
@@ -165,6 +165,32 @@ class DocksClanCLI:
         command = parts[0]
         args = parts[1:]
 
+        if command == "/rf":
+            if in_cmd_file:
+                self._error(f"Invalid command: Recursive file reads not allowed")
+                return
+            self._read_cmd_file(args)
+        else:
+            self._handle_command(command, args)
+
+    def _read_cmd_file(self, args: list[str]):
+        """Read file of commands and dispatch them"""
+        if not len(args) == 1:
+            self._error("Command failed: expects one arg - </path/to/cmd-file>")
+            return
+
+        filepath = Path(args[0])
+        if not filepath.exists():
+            self._error(f"Command failed: '{args[0]}' file not found")
+            return
+
+        with filepath.open(mode="r", encoding="utf-8") as fp:
+            for line in fp:
+                if not (line := line.strip()):
+                    continue
+                self._dispatch(line, True)
+
+    def _handle_command(self, command: str, args: list[str]):
         handler_name = COMMAND_HANDLERS.get(command)
         if handler_name is None:
             self._error(f"Unknown command: {command}")

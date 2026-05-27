@@ -1,8 +1,8 @@
-# The Docks Clan Handler
+# Docksy
 
-A Python project that provides:
-- A **CLI tool** for command management and execution.
-- A **Discord bot** powered by `discord.py` for server automation.
+**Docksy** is a companion bot and CLI toolkit for managing The Docks clan, an OSRS clan community in game and on Discord.
+It has multiple features, including tracking clan members, surface OSRS hiscore data, sumamrize drops, manage server-facing commands, and automate routine clan workflows from both Discord slash commands and an interactive terminal.
+
 
 ---
 
