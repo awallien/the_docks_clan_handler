@@ -33,7 +33,7 @@ class TheDocksDiscordBot(commands.Bot):
         dt_fmt = '%Y-%m-%d %H:%M:%S'
         formatter = logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}', dt_fmt, style='{')
         handler.setFormatter(formatter)
-        discord_utils.setup_logging(handler=handler, formatter=formatter, level=logging.DEBUG)        
+        discord_utils.setup_logging(handler=handler, formatter=formatter, level=logging.DEBUG)
 
     def _init_intents(self):
         intents = Intents.all()

@@ -9,7 +9,7 @@ from discord_bot.discord_bot_util import (
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from app import TheDocksDiscordBot
+    from app.bot import TheDocksDiscordBot
 
 def _format_ordinal(value):
     if not value:

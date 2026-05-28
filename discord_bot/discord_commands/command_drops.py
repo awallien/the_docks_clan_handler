@@ -8,7 +8,7 @@ from discord_bot import EmbedUtil
 
 from typing import Dict, TYPE_CHECKING
 if TYPE_CHECKING:
-    from app import TheDocksDiscordBot
+    from app.bot import TheDocksDiscordBot
 
 MAX_EMBED_FIELDS = 25
 GP_VALUE_RE = re.compile(r"([\d,.]+[kKmMbB]?)\s*gp")

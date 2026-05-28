@@ -3,4 +3,4 @@ from .discord_commands.command_docs import discord_bot_command_docs
 from .discord_commands.command_drops import discord_bot_command_drops
 from .discord_commands.command_spin import discord_bot_command_spin
 from .discord_commands.command_member import discord_bot_command_challenge, discord_bot_command_member
-from .discord_commands.command_leagues_board import discord_bot_leagues_board
+from .discord_commands.command_donate import discord_bot_command_donate
