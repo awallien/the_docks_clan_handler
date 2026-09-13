@@ -1,9 +1,26 @@
 import discord
 
+"""
+⁠✅grand-exchange💭 (here) - main chat hub
+⁠💰drops💰 - cool drops by the clan and other members with Dink plugin (see below), including threads
+⁠⚙ Cloggers Cloggin' Clogs ⚙  - clog items
+⁠🧩 Yooooo Clue Drop! 📜  - clue caskets opened
+⁠💀haha-you-dead-noob💀  - funny deaths from Dink plugin (see below)
+⁠🗡☠💥p-v-p💥☠🛡 - pvp deaths and glory from Dink plugin (see below)
+⁠📜osrs-clan-forum📜 - organized chat and forum like discussions including
+⁠How to Set up Dink Plugin for D… - set up Dink plugin
+⁠unknown - doc on clan ranking
+⁠📣announcement📣 - Goose has an annoucement
+⁠🎥spotlight🔴 - if you are a streamer
+⁠💎say-hi👋 - new discord members (OSRS players are yellow-coded)
+⁠🦺earth - touching grass?
+ Certified Jambo Enjoyers  - the scaper's main vc
+"""
+
 async def discord_bot_command_docs(BOT, interaction: discord.Interaction):
     embed = discord.Embed(
         title="The \"Docs\" Hub",
-        description="**Dock** here for guides, plugins, and support — everything you need in one place.",
+        description="**Docksy** here for guides, plugins, and support — everything you need in one place.",
         color=discord.Color.blue(),
     )
 

@@ -115,7 +115,7 @@ BOSSES = [
     "Grotesque Guardians", "Hespori",
     "Kalphite Queen", "King Black Dragon", "Kraken",
     "Kree'Arra", "K'ril Tsutsaroth",
-    "Lunar Chests", "Mimic",
+    "Lunar Chests", "Mad Angel", "Maggot King", "Mimic",
     "Nex", "Nightmare", "Phosani's Nightmare", 
     "Obor", "Phantom Muspah",
     "Sarachnis", "Scorpia", "Scurrius", "Shellbane Gryphon", 
