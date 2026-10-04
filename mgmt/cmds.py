@@ -49,6 +49,4 @@ COMMAND_SPECS: Tuple[CommandSpec, ...] = (
 
 COMMAND_HELP: Dict[str, str] = {spec.name: spec.description for spec in COMMAND_SPECS}
 HELP_ROWS: List[Tuple[str, str]] = [(spec.usage, spec.description) for spec in COMMAND_SPECS]
-COMMAND_HANDLERS: Dict[str, str] = {
-    spec.name: spec.handler for spec in COMMAND_SPECS if spec.handler is not None
-}
+COMMAND_HANDLERS: Dict[str, str] = {spec.name: spec.handler for spec in COMMAND_SPECS if spec.handler is not None}

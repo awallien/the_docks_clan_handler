@@ -1,6 +1,8 @@
 import re
 import os
 
+from resources import SKILLS, ACTIVITIES, BOSSES
+
 
 header = \
 """\"\"\"
@@ -79,55 +81,6 @@ class {class_name}:
         return f\"{class_name}({{[str(v) for v in self.__dict__.values()]}})\"
 
 {coll_get_fn if coll_get_fn else ''}"""
-
-SKILLS = [
-    "attack", "defence", "strength",
-    "hitpoints", "ranged", "prayer",
-    "magic", "cooking", "woodcutting",
-    "fletching", "fishing", "firemaking",
-    "crafting", "smithing", "mining",
-    "herblore", "agility", "thieving",
-    "slayer", "farming", "runecrafting",
-    "hunter", "construction", "sailing"
-]
-
-ACTIVITIES = [
-    "Grid Points", "League Points", "Deadman Points",
-    "Bounty Hunter - Hunter", "Bounty Hunter - Rogue",
-    "Bounty Hunter (Legacy) - Hunter", "Bounty Hunter (Legacy) - Rogue",
-    "Clue Scrolls (all)", "Clue Scrolls (beginner)", "Clue Scrolls (easy)",
-    "Clue Scrolls (medium)", "Clue Scrolls (hard)", "Clue Scrolls (elite)", "Clue Scrolls (master)",
-    "LMS - Rank", "PvP Arena - Rank", "Soul Wars Zeal", "Rifts closed", "Colosseum Glory",
-    "Collections Logged"
-]
-
-BOSSES = [
-    "Abyssal Sire", "Alchemical Hydra", 
-    "Amoxliatl", "Araxxor", "Artio",
-    "Barrows Chests", "Brutus", "Bryophyta",
-    "Callisto", "Cal'varion", "Cerberus", 
-    "Chambers of Xeric", "Chambers of Xeric: Challenge Mode", 
-    "Chaos Elemental", "Chaos Fanatic", "Commander Zilyana",
-    "Corporeal Beast", "Crazy Archaeologist",
-    "Dagannoth Prime", "Dagannoth Rex", "Dagannoth Supreme",
-    "Deranged Archaeologist", "Doom of Mokhaiotl", "Duke Sucellus",
-    "General Graardor", "Giant Mole",
-    "Grotesque Guardians", "Hespori",
-    "Kalphite Queen", "King Black Dragon", "Kraken",
-    "Kree'Arra", "K'ril Tsutsaroth",
-    "Lunar Chests", "Mad Angel", "Maggot King", "Mimic",
-    "Nex", "Nightmare", "Phosani's Nightmare", 
-    "Obor", "Phantom Muspah",
-    "Sarachnis", "Scorpia", "Scurrius", "Shellbane Gryphon", 
-    "Skotizo", "Sol Heredit", "Spindel",
-    "Tempoross", "The Gauntlet", "The Corrupted Gauntlet",
-    "The Hueycoatl", "The Leviathan", "The Royal Titans", "The Whisperer",
-    "Theatre of Blood", "Theatre of Blood: Hard Mode", "Thermonuclear Smoke Devil",
-    "Tombs of Amascut", "Tombs of Amascut: Expert Mode",
-    "TzKal-Zuk", "TzTok-Jad", "Vardorvis", "Venenatis", "Vet'ion", "Vorkath",
-    "Wintertodt", "Yama", "Zalcano", "Zulrah",
-]
-
 
 def generate_mdata_list(name, mdata_lst):
     mdata_str = '\n\t'.join([f"\"{mdata}\"," for mdata in mdata_lst])

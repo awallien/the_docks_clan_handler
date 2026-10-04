@@ -1,11 +1,13 @@
 from enum import StrEnum
 from dataclasses import dataclass
 
+"""
+#TODO: To be implemented, whenever we integrate an LLM
+"""
 
 @dataclass
 class GuardrailResult:
     ...
-
 
 class ContentDirectionType(StrEnum):
     INPUT = "input"
@@ -15,7 +17,6 @@ class ContentDirectionType(StrEnum):
 class GuardrailService:
     def __init__(self):
         ...
-
 
     async def check_input(self, content: str) -> GuardrailResult:
         return await self._check_contents(content, ContentDirectionType.INPUT)

@@ -8,6 +8,10 @@ from pathlib import Path
 from app import settings
 from discord_bot_util import EmbedUtil
 
+"""
+#TODO: To be implemented, whenever we integrate an LLM
+"""
+
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.bot import TheDocksDiscordBot

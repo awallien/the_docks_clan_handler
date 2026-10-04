@@ -1,5 +1,6 @@
 from pathlib import Path
 from PIL import ImageFont
+from hiscore_constants import SKILLS, ACTIVITIES, BOSSES
 
 # Base directory for all resources
 DIR_PATH = Path(__file__).resolve().parent

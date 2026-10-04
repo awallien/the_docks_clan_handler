@@ -2,7 +2,7 @@
 from pathlib import Path
 
 from .database import Database
-from util.osrs_api import SKILLS, BOSSES, ACTIVITIES
+from resources import SKILLS, BOSSES, ACTIVITIES
 
 
 def init_schema(db: Database, schema_path: str = None):

@@ -71,7 +71,6 @@ class TheDocksDiscordBot(commands.Bot):
 
         print(f"guild({self.guild}), mod({self.mod}))")
 
-
     async def on_ready(self):
         print(f"{self.user} has connected to Discord!")
         self._init_discord_vars()

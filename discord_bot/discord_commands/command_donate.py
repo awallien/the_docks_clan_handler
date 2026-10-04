@@ -16,9 +16,9 @@ def try_float(value):
 async def discord_bot_command_donate(bot: "TheDocksDiscordBot",
                                      interaction: discord.Interaction,
                                      value: float):
-    if (val := try_float(value)) <= 0 or val > 1000000:
+    if (val := try_float(value)) <= 0 or val > 10:
         await interaction.response.send_message(
-            embed=EmbedUtil.error_embed("The value you entered is invalid. Please enter a monetary value from 1..1000000"),
+            embed=EmbedUtil.error_embed("The value you entered is invalid. Please enter a monetary value from 1..10"),
             ephemeral=True,
         )
         return
@@ -26,6 +26,6 @@ async def discord_bot_command_donate(bot: "TheDocksDiscordBot",
     await interaction.response.send_message(
         embed=EmbedUtil.info_embed(
             title="Thank you for your donation!",
-            msg=f"We received your donation of {val}gp. Your contribution is greatly appreciated!"
+            msg=f"We received your donation of {val}. Your contribution is greatly appreciated!"
         )
     )
