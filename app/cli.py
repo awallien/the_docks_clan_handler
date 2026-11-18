@@ -130,13 +130,21 @@ class DocksClanCLI:
         
         return 0
     
-    def _print_response(self, resp) -> None:
+    def _print_response(self, resp, *, table=False) -> None:
         if resp is None:
             self._warn("Command completed with no output.")
         
         elif isinstance(resp, list):
-            for item in resp:
-                self._console.print(dict(item) if hasattr(item, "keys") else item)
+            if table and resp:
+                display = Table(show_header=True, header_style="bold magenta")
+                for name in resp[0]:
+                    display.add_column(str(name))
+                for row in resp:
+                    display.add_row(*(str(value) if value is not None else "—" for value in row.values()))
+                self._console.print(display)
+            else:
+                for item in resp:
+                    self._console.print(dict(item) if hasattr(item, "keys") else item)
         
         else:
             self._ok(str(resp))
@@ -219,6 +227,6 @@ class DocksClanCLI:
 
         try:
             resp = handler(args)
-            self._print_response(resp)
+            self._print_response(resp, table=(command == "/rm"))
         except Exception as exc:
             self._error(f"Command failed: {exc}")

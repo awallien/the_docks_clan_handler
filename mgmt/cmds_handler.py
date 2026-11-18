@@ -1,9 +1,11 @@
 from typing import List, Any, Dict, Set
 from datetime import date, datetime
+import csv
 import sqlite3
 
 from container import Container
 from entity import ClanMemberRank
+from resources.hiscore_constants import SKILLS, BOSSES, ACTIVITIES
 from util.osrs_api import Hiscore
 from .cmds import COMMAND_REQUIRED_ARGS, COMMAND_REQUIRED_POSITIONALS
 
@@ -76,13 +78,41 @@ class CommandSpecsHandler:
         return f"Created member {member} with id {last_row_id}"
 
     def cmd_rm(self, tokens: List[str], **args):
-        """Ex: /rm [member1 member2]"""
+        """List members with optional metric columns and CSV export."""
+        names, options = [], {}
+        for token in tokens:
+            if "=" not in token:
+                names.append(token)
+                continue
+            key, value = token.split("=", 1)
+            if key not in {"skill", "boss", "activities", "save"} or not value.strip() or key in options:
+                raise CommandSpecsArgsException(f"Invalid or duplicate option: {token}")
+            options[key] = value.strip()
 
-        members = []
-        if not len(tokens):
-            members = self._clan_service.list_members()
-        else:
-            members = self._clan_service.get_members(tokens)    
+        selected = {}
+        for option, repo, constants in (("skill", self._container.skill_repo(), SKILLS),
+                                        ("boss", self._container.boss_repo(), BOSSES),
+                                        ("activities", self._container.activity_repo(), ACTIVITIES)):
+            selected[option] = []
+            if option not in options:
+                continue
+            available = {name.casefold(): name for name in constants}
+            stored = {row["name"]: row for row in repo.list_all()}
+            seen = set()
+            requested = constants if options[option].casefold() == "all" else options[option].split(",")
+            for item in requested:
+                key = item.strip().casefold()
+                if not key or key not in available:
+                    raise CommandSpecsArgsException(f"Unknown {option}: {item.strip()}")
+                if key not in seen:
+                    name = available[key]
+                    if name not in stored:
+                        raise CommandSpecsArgsException(f"{option} '{name}' is missing from the database")
+                    selected[option].append(stored[name])
+                    seen.add(key)
+
+        members = (self._clan_service.get_members(names) if names
+                   else self._clan_service.list_members())
 
         if not members:
             raise CommandSpecsArgsException("Unable to find any members.")
@@ -93,7 +123,29 @@ class CommandSpecsHandler:
             for field in ("joined_date", "last_rank_date"):
                 if row[field] is not None:
                     row[field] = self._ordinal_to_dt(row[field])
+            if selected["skill"]:
+                values = {item["skill_id"]: item for item in self._container.clan_skill_repo().list_by_clan(row["id"])}
+                for skill in selected["skill"]:
+                    value = values.get(skill["id"])
+                    row[f'{skill["name"]} level'] = value["level"] if value else None
+                    row[f'{skill["name"]} xp'] = value["total_xp"] if value else None
+            if selected["boss"]:
+                values = {item["boss_id"]: item for item in self._container.clan_boss_repo().list_by_clan(row["id"])}
+                for boss in selected["boss"]:
+                    value = values.get(boss["id"])
+                    row[f'{boss["name"]} kills'] = value["count"] if value else None
+            if selected["activities"]:
+                values = {item["activity_id"]: item for item in self._container.clan_activity_repo().list_by_clan(row["id"])}
+                for activity in selected["activities"]:
+                    value = values.get(activity["id"])
+                    row[f'{activity["name"]} count'] = value["count"] if value else None
             result.append(row)
+
+        if "save" in options:
+            with open(options["save"], "x", newline="", encoding="utf-8") as output:
+                writer = csv.DictWriter(output, fieldnames=list(result[0]))
+                writer.writeheader()
+                writer.writerows(result)
         return result
 
 

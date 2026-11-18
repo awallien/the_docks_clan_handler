@@ -26,8 +26,8 @@ COMMAND_SPECS: Tuple[CommandSpec, ...] = (
     ),
     CommandSpec(
         name="/rm",
-        usage="/rm [members ...]",
-        description="List all members or selected members' entries (space-separated) from clan DB",
+        usage="/rm [members ...] [skill=name,...|all] [boss=name,...|all] [activities=name,...|all] [save=path]",
+        description="Show member details and selected metrics; optionally save CSV",
         handler="cmd_rm",
     ),
     CommandSpec(

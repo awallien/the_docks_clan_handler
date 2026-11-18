@@ -37,6 +37,23 @@ By default, the CLI, bot, and scheduler run together. Use `./run.sh --bot` and
 the same flags work with `run.ps1`. Run only one scheduler instance at a time.
 The scheduler's hiscore refresh is not implemented yet.
 
+See the [CLI command reference](docs/cli-commands.md) for all commands and
+examples.
+
+In the CLI, `/rm` displays member details in a table. Select stored metrics and
+optionally save the same rows to a new CSV file, for example:
+
+```text
+/rm "Player One" PlayerTwo skill=attack,magic boss="Abyssal Sire" activities="Clue Scrolls (all)" save=report.csv
+/rm "Player One" skill=all boss=all activities=all
+```
+
+Omit player names to show all members. Metric names come from
+`resources/hiscore_constants.py`; quote arguments containing spaces. Missing
+stored values display as `—` and are blank in CSV. Existing files are not
+overwritten. The `all` options can produce a very wide table; CSV may be easier
+to inspect.
+
 Note that running these scripts will also generate the needed OSRS metadata files:
 - `util/osrs_api/bosses.py`
 - `util/osrs_api/skills.py`
