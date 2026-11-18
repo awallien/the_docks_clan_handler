@@ -17,7 +17,8 @@ if (-not $ArgsFromUser -or $ArgsFromUser.Count -eq 0) {
 
 # === Auto-generate hiscore metadata first ===
 Write-Info "Auto-generating python files..."
-python "util\osrs_api\hiscore_mdata_autogen.py"
+$env:PYTHONPATH = $PSScriptRoot
+python ".\util\osrs_api\hiscore_mdata_autogen.py"
 if ($LASTEXITCODE -ne 0) {
     Write-ErrorMsg "Error running hiscore_mdata_autogen.py. Exiting."
     exit 1

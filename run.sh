@@ -20,15 +20,14 @@ if [ "$#" -eq 0 ]; then
 fi
 
 PYTHON_BIN="${PYTHON:-python3}"
-PYTHON_VERSION="$("$PYTHON_BIN" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
-if [ "$PYTHON_VERSION" != "3.11" ]; then
-    write_error "Python3.11 is required, but ${PYTHON_BIN} is Python ${PYTHON_VERSION}."
-    write_error "Set PYTHON=/path/to/python3.11 or update your python3 executable."
+if ! "$PYTHON_BIN" -c 'import sys; sys.exit(sys.version_info < (3, 11))'; then
+    write_error "Python 3.11 or newer is required."
+    write_error "Set PYTHON to a compatible executable or update your python3 executable."
     exit 1
 fi
 
 write_info "Auto-generating python files..."
-if ! "$PYTHON_BIN" "util/osrs_api/hiscore_mdata_autogen.py"; then
+if ! PYTHONPATH=".${PYTHONPATH:+:PYTHONPATH}" "$PYTHON_BIN" "util/osrs_api/hiscore_mdata_autogen.py"; then
     write_error "Error running hiscore_mdata_autogen.py. Exiting."
     exit 1
 fi
