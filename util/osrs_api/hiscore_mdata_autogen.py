@@ -1,7 +1,7 @@
 import re
 import os
 
-from resources import SKILLS, ACTIVITIES, BOSSES
+from resources.hiscore_constants import SKILLS, ACTIVITIES, BOSSES
 
 
 header = \

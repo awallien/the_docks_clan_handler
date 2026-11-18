@@ -107,6 +107,7 @@ BOSSES = [
     "The Whisperer",
     "Theatre of Blood",
     "Theatre of Blood: Hard Mode",
+    "The Fractured Archive",
     "Thermonuclear Smoke Devil",
     "Tombs of Amascut",
     "Tombs of Amascut: Expert Mode",
