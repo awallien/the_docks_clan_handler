@@ -1,8 +1,11 @@
 from typing import List, Any, Dict, Set
-from datetime import datetime
+from datetime import date, datetime
+import sqlite3
 
 from container import Container
 from entity import ClanMemberRank
+from util.osrs_api import Hiscore
+from .cmds import COMMAND_REQUIRED_ARGS, COMMAND_REQUIRED_POSITIONALS
 
 class CommandSpecsArgsException(Exception):
     pass
@@ -43,17 +46,26 @@ class CommandSpecsHandler:
     def _ordinal_to_dt(ordinal: int):
         return datetime.fromordinal(int(ordinal)).strftime("%Y-%m-%d")
 
+    @staticmethod
+    def _validate_rank(rank):
+        if rank not in ClanMemberRank.values() or rank == ClanMemberRank.RANK_INVALID:
+            raise CommandSpecsArgsException(f"Invalid rank: {rank}")
+
     def cmd_cm(self, tokens: List[str], **args):
         """Ex: /cm member=new_member joined_date=2021-01-01 rank=1"""
-        required_args = {"member", "joined_date"}
         payload = self._parse_kv_tokens(tokens)
 
-        self._check_missing_args(required_args, payload)
+        self._check_missing_args(COMMAND_REQUIRED_ARGS["cmd_cm"], payload)
 
         member = payload["member"]
-        joined_date = self._dt_to_ordinal(payload["joined_date"])
-        
-        rank = payload.get("rank", ClanMemberRank.RANK_1)
+        joined_date = (self._dt_to_ordinal(payload["joined_date"])
+                       if "joined_date" in payload else date.today().toordinal())
+
+        rank = payload.get("rank")
+        if rank is None:
+            rank = self._container.rank_service().new_member_rank(Hiscore(member))
+        else:
+            self._validate_rank(rank)
 
         last_row_id = self._clan_service.create_member(
             name = member,
@@ -75,31 +87,49 @@ class CommandSpecsHandler:
         if not members:
             raise CommandSpecsArgsException("Unable to find any members.")
 
-        return [dict(member) for member in members] 
+        result = []
+        for member in members:
+            row = dict(member)
+            for field in ("joined_date", "last_rank_date"):
+                if row[field] is not None:
+                    row[field] = self._ordinal_to_dt(row[field])
+            result.append(row)
+        return result
 
 
     def cmd_um(self, tokens: List[str], **args):
         """Ex: /um member=member1 ..."""
-        required_args = {"member"}
         payload = self._parse_kv_tokens(tokens)
 
-        self._check_missing_args(required_args, payload)
+        self._check_missing_args(COMMAND_REQUIRED_ARGS["cmd_um"], payload)
 
         member = payload.pop("member")
         if not payload:
             raise CommandSpecsArgsException(f"No values to update for member {member}")
 
+        new_name = payload.pop("new_name", None)
+        if new_name is not None:
+            payload["member"] = new_name
+
+        if "rank" in payload:
+            self._validate_rank(payload["rank"])
+
         for date_field in {"joined_date", "last_rank_date"} & payload.keys():
             payload[date_field] = self._dt_to_ordinal(payload[date_field])
 
-        updated = self._clan_service.update_member(member, payload)
+        try:
+            updated = self._clan_service.update_member(member, payload)
+        except sqlite3.IntegrityError as exc:
+            if new_name is not None and getattr(exc, "sqlite_errorname", None) == "SQLITE_CONSTRAINT_UNIQUE":
+                raise CommandSpecsArgsException(f"Member '{new_name}' already exists") from exc
+            raise
         return f"Updated {updated} member(s)"
 
 
     def cmd_dm(self, tokens: List[str], **args):
         """Ex: /dm member1 ..."""
         members = tokens
-        if not members:
+        if len(members) < len(COMMAND_REQUIRED_POSITIONALS["cmd_dm"]):
             raise CommandSpecsArgsException("No members to delete.")
 
         if len(members) == 1:

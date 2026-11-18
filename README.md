@@ -20,16 +20,22 @@ pip install -r requirements.txt
 
 ## Usage
 ### (Windows 10+ Based)
-#### Running the CLI, Bot, or Both
+#### Running the CLI and Bot
 ```
-PS > .\run.ps1 --cli [--bot]
+PS > .\run.ps1
 ```
 
 ### (Linux Based)
-#### Running the CLI, Bot or Both
+#### Running the CLI and Bot
 ```
-$ ./run.sh --cli [--bot]
+$ ./run.sh
 ```
+
+By default, the CLI, bot, and scheduler run together. Use `./run.sh --bot` and
+`./run.sh --scheduler` to run the bot and scheduler independently, and
+`./run.sh --cli` for a separate administrative session. Flags can be combined;
+the same flags work with `run.ps1`. Run only one scheduler instance at a time.
+The scheduler's hiscore refresh is not implemented yet.
 
 Note that running these scripts will also generate the needed OSRS metadata files:
 - `util/osrs_api/bosses.py`

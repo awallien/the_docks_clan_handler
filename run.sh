@@ -13,12 +13,6 @@ write_success() {
     printf '\033[32m%s\033[0m\n' "$1"
 }
 
-if [ "$#" -eq 0 ]; then
-    write_error "Usage: ./run.sh --cli, --bot, or both"
-    printf 'Example: ./run.sh --cli --bot\n'
-    exit 1
-fi
-
 PYTHON_BIN="${PYTHON:-python3}"
 if ! "$PYTHON_BIN" -c 'import sys; sys.exit(sys.version_info < (3, 11))'; then
     write_error "Python 3.11 or newer is required."

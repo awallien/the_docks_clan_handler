@@ -49,7 +49,7 @@ async def clan_db_schdeduler(container: Container, delay: int=3600, init_delay: 
             pass
         except Exception as e:
             print(f"[Scheduler Error] {e}")
-            return
+            raise
 
         # wait 1 hour
         await asyncio.sleep(delay)

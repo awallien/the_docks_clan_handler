@@ -8,13 +8,6 @@ function Write-Info($msg) { Write-Host $msg -ForegroundColor Cyan }
 function Write-ErrorMsg($msg) { Write-Host $msg -ForegroundColor Red }
 function Write-Success($msg) { Write-Host $msg -ForegroundColor Green }
 
-# === Check if user passed arguments ===
-if (-not $ArgsFromUser -or $ArgsFromUser.Count -eq 0) {
-    Write-ErrorMsg "Usage: .\run.ps1 --cli, --bot, or both"
-    Write-Host "Example: .\run.ps1 --cli --bot"
-    exit 1
-}
-
 # === Auto-generate hiscore metadata first ===
 Write-Info "Auto-generating python files..."
 $env:PYTHONPATH = $PSScriptRoot

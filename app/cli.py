@@ -1,4 +1,5 @@
 
+import asyncio
 import shlex
 import time
 from pathlib import Path
@@ -85,7 +86,7 @@ class DocksClanCLI:
         
         self._console.print(table)
 
-    def run(self) -> int:
+    async def run(self) -> int:
         """The main CLI run loop"""
 
         self._console.print(
@@ -97,11 +98,11 @@ class DocksClanCLI:
 
         while True:
             try:
-                raw = self._session.prompt(
+                raw = (await self._session.prompt_async(
                     self._cli_prompt,
                     completer=self._completer,
                     complete_while_typing=True,
-                ).strip()
+                )).strip()
             except EOFError:
                 self._console.print("")
                 break
@@ -120,22 +121,12 @@ class DocksClanCLI:
 
             self._interrupt_armed = False
 
-            if raw in {"/exit", "/quit", "exit", "quit"}:
-                break
-
-            if raw in {"/help", "help"}:
-                self._print_help()
-                continue
-
-            if raw in {"/clear", "clear"}:
-                self._console.clear()
-                continue
-
-            if not raw.startswith("/"):
+            if not raw.startswith("/") and raw not in {"exit", "quit", "help", "clear"}:
                 self._warn("Commands must start with '/'. Type /help for usage.")
                 continue
 
-            self._dispatch(raw)
+            if await self._dispatch(raw):
+                break
         
         return 0
     
@@ -150,7 +141,7 @@ class DocksClanCLI:
         else:
             self._ok(str(resp))
 
-    def _dispatch(self, raw: str, in_cmd_file: bool = False) -> None:
+    async def _dispatch(self, raw: str, in_cmd_file: bool = False) -> bool | None:
         """Handles raw input from the user"""
 
         try:
@@ -165,15 +156,28 @@ class DocksClanCLI:
         command = parts[0]
         args = parts[1:]
 
-        if command == "/rf":
+        if not args and command in {"/exit", "/quit", "exit", "quit"}:
+            return True
+        if not args and command in {"/help", "help"}:
+            self._print_help()
+        elif not args and command in {"/clear", "clear"}:
+            self._console.clear()
+        elif command == "/rf":
             if in_cmd_file:
                 self._error(f"Invalid command: Recursive file reads not allowed")
                 return
-            self._read_cmd_file(args)
+            return await self._read_cmd_file(args)
         else:
-            self._handle_command(command, args)
+            task = asyncio.create_task(asyncio.to_thread(self._handle_command, command, args))
+            try:
+                await asyncio.shield(task)
+            except asyncio.CancelledError:
+                if not task.done():
+                    self._warn("Waiting for the current command to finish before shutting down.")
+                await task
+                raise
 
-    def _read_cmd_file(self, args: list[str]):
+    async def _read_cmd_file(self, args: list[str]):
         """Read file of commands and dispatch them"""
         if not len(args) == 1:
             self._error("Command failed: expects one arg - </path/to/cmd-file>")
@@ -184,11 +188,26 @@ class DocksClanCLI:
             self._error(f"Command failed: '{args[0]}' file not found")
             return
 
-        with filepath.open(mode="r", encoding="utf-8") as fp:
-            for line in fp:
-                if not (line := line.strip()):
-                    continue
-                self._dispatch(line, True)
+        if not filepath.is_file():
+            self._error(f"Command failed: '{args[0]}' is not a regular file")
+            return
+
+        try:
+            contents = filepath.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            self._error(f"Command failed: unable to read '{args[0]}' as UTF-8 text: {exc}")
+            return
+
+        if "\x00" in contents:
+            self._error(f"Command failed: '{args[0]}' is not a text file")
+            return
+
+        for line in contents.splitlines():
+            await asyncio.sleep(0)
+            if not (line := line.strip()):
+                continue
+            if await self._dispatch(line, True) is True:
+                return True
 
     def _handle_command(self, command: str, args: list[str]):
         handler_name = COMMAND_HANDLERS.get(command)

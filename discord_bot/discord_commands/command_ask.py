@@ -5,7 +5,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from app import settings
+from app.config import settings
 from discord_bot_util import EmbedUtil
 
 """
