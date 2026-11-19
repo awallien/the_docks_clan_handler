@@ -1,4 +1,5 @@
 from db import Database
+from repositories.hiscore_repo import HiscoreRepository
 
 from repositories import (
     ClanRepository,
@@ -32,6 +33,9 @@ class Container:
 
     def clan_repo(self):
         return self._get("clan_repo", lambda: ClanRepository(self.db))
+
+    def hiscore_repo(self):
+        return self._get("hiscore_repo", lambda: HiscoreRepository(self.db))
 
     def skill_repo(self):
         return self._get("skill_repo", lambda: SkillRepository(self.db))

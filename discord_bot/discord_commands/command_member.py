@@ -78,13 +78,11 @@ async def _clan_stats_member(bot: "TheDocksDiscordBot",
 
     rank = clan_stats.get("rank") or "Unknown"
     joined_date = _format_ordinal(clan_stats.get("joined_date"))
-    last_rank_date = _format_ordinal(clan_stats.get("last_rank_date"))
 
     embed.set_thumbnail(url=RankUtil.get_rank_icon_url(rank))
     (
         embed.add_field(name="Rank", value=rank, inline=True)
         .add_field(name="Joined Date", value=joined_date, inline=True)
-        .add_field(name="Last Rank Date", value=last_rank_date, inline=True)
     )
 
     if kwargs.get("verbose"):

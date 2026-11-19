@@ -8,6 +8,7 @@ It has multiple features, including tracking clan members, surface OSRS hiscore 
 
 ## Requirements
 - Python 3.11+
+- SQLite 3.35+ when migrating an existing database that has `last_rank_date`
 - [discord.py](https://discordpy.readthedocs.io/en/stable/)
 - Other dependencies listed in `requirements.txt`
 
@@ -35,7 +36,12 @@ By default, the CLI, bot, and scheduler run together. Use `./run.sh --bot` and
 `./run.sh --scheduler` to run the bot and scheduler independently, and
 `./run.sh --cli` for a separate administrative session. Flags can be combined;
 the same flags work with `run.ps1`. Run only one scheduler instance at a time.
-The scheduler's hiscore refresh is not implemented yet.
+The scheduler refreshes stored hiscores for clan members on startup and
+then every hour. Unranked values are skipped, leaving any previously stored
+value unchanged. After a successful refresh it recalculates eligible clan ranks
+and marks changes as pending. Special, honorary, and administrative ranks are
+left unchanged. The `rank_update` flag remains set until a future reporting
+workflow clears it; the bot command to report and clear flags is not yet built.
 
 See the [CLI command reference](docs/cli-commands.md) for all commands and
 examples.

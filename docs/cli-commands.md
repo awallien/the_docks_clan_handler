@@ -11,9 +11,7 @@ case-sensitive. Type `/help` at the prompt for a command summary.
 ```
 
 `member` is required. If `joined_date` is omitted, it defaults to the local
-date. If `rank` is omitted, Docksy fetches the player's OSRS hiscores and uses
-the rank service to choose a starting rank. If the lookup fails, the member is
-not created; supply a rank to skip the lookup. Valid manual ranks are `1`
+date. If `rank` is omitted, the member starts at rank 1. Valid manual ranks are `1`
 through `24`, `A`, `D`, and `O`.
 
 ## Read members: `/rm`
@@ -41,13 +39,13 @@ exist, and existing files are not overwritten. If some requested names do not
 exist, only matching members are shown; if none match, the command reports an
 error.
 
-The displayed metrics are stored values. The scheduler's hiscore refresh has
-not yet been implemented.
+The displayed metrics are stored values refreshed by the scheduler. Unranked
+hiscore values are skipped, leaving any previously stored values unchanged.
 
 ## Update a member: `/um`
 
 ```text
-/um member="Player One" [new_name="New Name"] [joined_date=YYYY-MM-DD] [rank=2] [last_rank_date=YYYY-MM-DD]
+/um member="Player One" [new_name="New Name"] [joined_date=YYYY-MM-DD] [rank=2]
 ```
 
 `member` identifies the existing member. Supply at least one field to update.

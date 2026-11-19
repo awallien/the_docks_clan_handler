@@ -1,4 +1,3 @@
-import sys
 import requests
 from collections import OrderedDict
 from enum import Enum, verify, UNIQUE
@@ -44,6 +43,9 @@ class Hiscore:
     def __parse_user_data(self, content):
         idx = 0
         content_fields = content.strip().split("\n")
+        expected = 1 + len(SKILLS) + len(ACTIVITIES) + len(BOSSES)
+        if len(content_fields) != expected:
+            raise ValueError(f"Expected {expected} hiscore rows, received {len(content_fields)}")
         
         self._total_rank, self._total_level, self._total_xp = map(int, content_fields[idx].split(","))
         idx += 1
@@ -62,9 +64,6 @@ class Hiscore:
             boss_cls = self.bosses.get(boss)
             boss_cls.rank, boss_cls.score = map(int, content_fields[idx].split(","))
             idx += 1
-
-        if not idx == len(content_fields):
-            print(f"Only parsed {idx}/{len(content_fields)} of user hiscore data. Please check for any errors or API modifications on runescape wiki.", file=sys.stderr)
 
     def __fetch_user_data(self):
         response = requests.get(url=self._url, timeout=HISCORE_REQUEST_TIMEOUT)

@@ -1,55 +1,71 @@
 import asyncio
+import logging
 
 from container import Container
+from resources.hiscore_constants import ACTIVITIES, BOSSES, SKILLS
+from util.osrs_api import Hiscore
+
+logger = logging.getLogger(__name__)
 
 
-async def clan_db_schdeduler(container: Container, delay: int=3600, init_delay: int=900):
-    """Schedules a task to update clan members' info in DB.
-    For each member:
-        1. fetch hiscore
-        2. update rank, boss, skill, activity tables in DB
-    """
+def refresh_member(container: Container, member):
+    """Fetch and atomically store one member's ranked hiscore values."""
+    name = member["member"]
+    hiscore = Hiscore(name)
+    skills = {}
+    for metric in SKILLS:
+        value = hiscore.skills.get(metric)
+        if value.level < -1 or value.xp < -1:
+            raise ValueError(f"Invalid hiscore values for skill '{metric}'")
+        if value.level != -1 and value.xp != -1:
+            skills[metric] = (value.level, value.xp)
 
-    # Iniially wait until DB is ready
-    # TODO: convert to check and wait
-    await asyncio.sleep(init_delay)
+    def scores(names, collection):
+        result = {}
+        for metric in names:
+            score = collection.get(metric).score
+            if score < -1:
+                raise ValueError(f"Invalid hiscore score for '{metric}'")
+            if score != -1:
+                result[metric] = score
+        return result
 
-    while True:
+    def calculate_rank(current_rank, joined_date):
         try:
-            # print("Running scheduled boss update...")
-            # clan_service = container.clan_service()
-            
-            # skill_service = container.skill_service()
-            # boss_service = container.boss_service()
-            # activity_service = container.activity_service()
-            # rank_service = container.rank_service()
+            return container.rank_service().get_next_rank(hiscore, current_rank, joined_date)
+        except (TypeError, ValueError, OverflowError):
+            logger.exception("Cannot calculate rank for %s; keeping current rank", name)
+            return None
 
-            # # Example: fetch members from DB
-            # members = clan_service.get_all_members()  # sync? wrap if needed
+    saved = container.hiscore_repo().save_snapshot(
+        member["id"], name, skills,
+        scores(ACTIVITIES, hiscore.activities), scores(BOSSES, hiscore.bosses),
+        calculate_rank,
+    )
+    if not saved:
+        logger.info("Skipped %s: member was renamed or removed during refresh", name)
+    return saved
 
-            # # If this is sync DB call, do:
-            # members = await asyncio.to_thread(clan_service.get_all_members)
 
-            # names = [m["member"] for m in members]
-
-            # # Fetch hiscores in parallel (your earlier logic)
-            # results = await fetch_many(names)
-
-            # # Update DB
-            # for name, data in results.items():
-            #     if data is None:
-            #         continue
-
-            #     # if boss_service is sync → wrap it
-            #     await asyncio.to_thread(
-            #         boss_service.update_from_hiscore,
-            #         name,
-            #         data
-            #     )
-            pass
-        except Exception as e:
-            print(f"[Scheduler Error] {e}")
+async def refresh_members(container: Container):
+    members = await asyncio.to_thread(container.clan_service().list_members)
+    for member in members:
+        task = asyncio.create_task(asyncio.to_thread(refresh_member, container, member))
+        try:
+            await asyncio.shield(task)
+        except asyncio.CancelledError:
+            # Do not abandon an in-flight fetch/write on shutdown.
+            try:
+                await task
+            except Exception:
+                logger.exception("Hiscore refresh failed for %s during shutdown", member["member"])
             raise
+        except Exception:
+            logger.exception("Hiscore refresh failed for %s", member["member"])
 
-        # wait 1 hour
+
+async def clan_db_schdeduler(container: Container, delay: int = 3600):
+    """Refresh hiscores and eligible ranks periodically."""
+    while True:
+        await refresh_members(container)
         await asyncio.sleep(delay)

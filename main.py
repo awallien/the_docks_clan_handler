@@ -49,7 +49,7 @@ async def main():
     if args.bot or run_all:
         tasks[asyncio.create_task(run_bot(container), name="bot")] = "bot"
     if args.scheduler or run_all:
-        tasks[asyncio.create_task(clan_db_schdeduler(container, init_delay=900, delay=3600), name="scheduler")] = "scheduler"
+        tasks[asyncio.create_task(clan_db_schdeduler(container, delay=3600), name="scheduler")] = "scheduler"
     stop_task = asyncio.create_task(stop.wait(), name="shutdown signal")
 
     try:

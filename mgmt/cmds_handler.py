@@ -6,7 +6,6 @@ import sqlite3
 from container import Container
 from entity import ClanMemberRank
 from resources.hiscore_constants import SKILLS, BOSSES, ACTIVITIES
-from util.osrs_api import Hiscore
 from .cmds import COMMAND_REQUIRED_ARGS, COMMAND_REQUIRED_POSITIONALS
 
 class CommandSpecsArgsException(Exception):
@@ -65,7 +64,7 @@ class CommandSpecsHandler:
 
         rank = payload.get("rank")
         if rank is None:
-            rank = self._container.rank_service().new_member_rank(Hiscore(member))
+            rank = self._container.rank_service().new_member_rank()
         else:
             self._validate_rank(rank)
 
@@ -120,7 +119,7 @@ class CommandSpecsHandler:
         result = []
         for member in members:
             row = dict(member)
-            for field in ("joined_date", "last_rank_date"):
+            for field in ("joined_date",):
                 if row[field] is not None:
                     row[field] = self._ordinal_to_dt(row[field])
             if selected["skill"]:
@@ -166,7 +165,7 @@ class CommandSpecsHandler:
         if "rank" in payload:
             self._validate_rank(payload["rank"])
 
-        for date_field in {"joined_date", "last_rank_date"} & payload.keys():
+        for date_field in {"joined_date"} & payload.keys():
             payload[date_field] = self._dt_to_ordinal(payload[date_field])
 
         try:

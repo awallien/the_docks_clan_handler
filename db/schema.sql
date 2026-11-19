@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS clan (
     member TEXT NOT NULL UNIQUE,
     joined_date DATE,
     rank TEXT,
-    last_rank_date DATE
+    rank_update INTEGER NOT NULL DEFAULT 0 CHECK(rank_update IN (0, 1))
 );
 
 CREATE TABLE IF NOT EXISTS skills (

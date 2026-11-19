@@ -26,6 +26,14 @@ def init_schema(db: Database, schema_path: str = None):
         # Create tables
         conn.executescript(schema_sql)
 
+        # Acquire the write lock before checking so concurrent processes migrate only once.
+        conn.execute("BEGIN IMMEDIATE")
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(clan)")}
+        if "rank_update" not in columns:
+            conn.execute("ALTER TABLE clan ADD COLUMN rank_update INTEGER NOT NULL DEFAULT 0 CHECK(rank_update IN (0, 1))")
+        if "last_rank_date" in columns:
+            conn.execute("ALTER TABLE clan DROP COLUMN last_rank_date")
+
         # Seed data safely
         for table, params in tables_and_params:
             if not params:

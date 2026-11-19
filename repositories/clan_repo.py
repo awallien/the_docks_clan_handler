@@ -6,7 +6,6 @@ class ClanUpdateValues(TypedDict, total=False):
     member: NotRequired[str]
     joined_date: NotRequired[int]
     rank: NotRequired[str]
-    last_rank_date: NotRequired[int]
 
 class ClanRepository:
     def __init__(self, db: Database):

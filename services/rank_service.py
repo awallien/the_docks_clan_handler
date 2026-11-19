@@ -1,5 +1,5 @@
 
-from datetime import date, datetime
+from datetime import date
 from typing import Dict, List
 
 from util.osrs_api import Hiscore, SKILLS as osrs_api_SKILLS, Skill
@@ -11,22 +11,11 @@ class RankService:
     CMB_SKILLS = MELEE_CMB_SKILLS | {"ranged", "magic"}
     NON_COMBAT_SKILLS = set(osrs_api_SKILLS) - (CMB_SKILLS | {"hitpoints"})
 
-    RANK_2_AVG_REQUIREMENT = 80
-    DATE_TOLERANCE_DAYS = 1
     DAYS_PER_MONTH = 30
     
     @classmethod
-    def new_member_rank(cls, hiscore_data: Hiscore) -> ClanMemberRank:
-        """Place new member rank in either RANK_1 or RANK_2"""
-        if hiscore_data is None:
-            return ClanMemberRank.RANK_1
-        
-        combat_avg = cls.get_combat_avg(hiscore_data)
-        non_combat_avg = cls.get_non_combat_avg(hiscore_data)
-
-        if max(combat_avg, non_combat_avg) >= cls.RANK_2_AVG_REQUIREMENT:
-           return ClanMemberRank.RANK_2
-        
+    def new_member_rank(cls, hiscore_data: Hiscore | None = None) -> ClanMemberRank:
+        """All new members start at rank 1."""
         return ClanMemberRank.RANK_1
     
     @classmethod
@@ -38,54 +27,24 @@ class RankService:
     ) -> ClanMemberRank:
         """Return the next rank a member currently qualifies for."""
 
-        if current_rank == ClanMemberRank.RANK_INVALID:
+        if current_rank not in ClanMemberRank.values() or current_rank == ClanMemberRank.RANK_INVALID:
             raise ValueError("Clan member's rank is invalid")
 
-        # Honorary/admin ranks and RANK_15 do not auto-promote.
-        if (
-            current_rank == ClanMemberRank.RANK_15
+        if (current_rank in ClanMemberRank.special_rank()
             or current_rank in ClanMemberRank.honorable_ranks()
-            or current_rank in ClanMemberRank.administrative_ranks()
-        ):
+            or current_rank in ClanMemberRank.administrative_ranks()):
             return current_rank
 
-        # Active-rank progression is time-based.
-        if current_rank in ClanMemberRank.activeness_ranks():
-            if not cls._has_been_active_long_enough(joined_date):
-                return current_rank
+        # None represents a failed or unavailable lookup, not incomplete data.
+        if hiscore is None:
+            return current_rank
 
-            active_rank_progression = {
-                ClanMemberRank.RANK_1: ClanMemberRank.RANK_3,
-                ClanMemberRank.RANK_2: ClanMemberRank.RANK_3,
-                ClanMemberRank.RANK_3: ClanMemberRank.RANK_4,
-            }
-
-            if current_rank in active_rank_progression:
-                return active_rank_progression[current_rank]
-
-            # RANK_4 transitions into achievement ranks.
-            if current_rank == ClanMemberRank.RANK_4:
-                return cls._get_next_achievement_rank(hiscore)
-
-        if current_rank in ClanMemberRank.achievement_ranks():
-            return cls._get_next_achievement_rank(hiscore)
-
-        return current_rank
-
-    @classmethod
-    def _has_been_active_long_enough(cls, joined_date: int) -> bool:
-        """
-        Return whether enough time has passed for the next activity promotion.
-
-        joined_date is stored as an ordinal. A small tolerance is allowed
-        because the stored date does not include timezone information.
-        """
-        joined = datetime.fromordinal(joined_date).date()
-        days_since_join = (date.today() - joined).days
-
-        minimum_days = cls.DAYS_PER_MONTH - cls.DATE_TOLERANCE_DAYS
-
-        return days_since_join >= minimum_days
+        days_since_join = (date.today() - date.fromordinal(joined_date)).days
+        if days_since_join < 0:
+            raise ValueError("Join date cannot be in the future")
+        if days_since_join < 4 * cls.DAYS_PER_MONTH:
+            return str(1 + days_since_join // cls.DAYS_PER_MONTH)
+        return cls._get_next_achievement_rank(hiscore)
     
     @classmethod
     def _get_next_achievement_rank(
@@ -93,7 +52,12 @@ class RankService:
         hiscore: Hiscore | None,
     ) -> ClanMemberRank:
         """Return the highest achievement rank currently qualified for."""
-        if hiscore is None:
+        if any(
+            (skill := hiscore.skills.get(name)) is None
+            or skill.level is None or skill.xp is None
+            or skill.level < 0 or skill.xp < 0
+            for name in osrs_api_SKILLS
+        ):
             return ClanMemberRank.RANK_5
 
         combat_avg = cls.get_combat_avg(hiscore)
@@ -117,22 +81,19 @@ class RankService:
                 return rank
 
         # All remaining achievement ranks require 99s.
-        if combat_avg == 99 and cls.get_non_combat_avg(
-            hiscore,
-            n_highest=len(cls.NON_COMBAT_SKILLS),
-        ) == 99:
+        if all(hiscore.skills.get(name).level >= 99 for name in osrs_api_SKILLS):
             return ClanMemberRank.RANK_15
 
-        if combat_avg == 99 and cls.get_non_combat_avg(
+        if combat_avg >= 99 and cls.get_non_combat_avg(
             hiscore,
             n_highest=6,
-        ) == 99:
+        ) >= 99:
             return ClanMemberRank.RANK_14
 
-        if combat_avg == 99 and non_combat_avg == 99:
+        if combat_avg >= 99 and non_combat_avg >= 99:
             return ClanMemberRank.RANK_13
 
-        if highest_avg == 99:
+        if highest_avg >= 99:
             return ClanMemberRank.RANK_12
 
         return ClanMemberRank.RANK_5
