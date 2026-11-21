@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     CLOG_THREAD: str
 
     ENV: str
-    AGENT_CMD: str
+    AGENT_CMD: str = ""
     AGENT_MODEL: str = "gpt-5.3-codex-fast"
     AGENT_API_KEY: str = ""
 

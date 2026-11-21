@@ -91,12 +91,17 @@ class TheDocksDiscordBot(commands.Bot):
             else:
                 raise ClientException(f"Bot owner {self.mod} is not found!")
             
-    async def on_member_join(self, member):
-        if any(role in member.roles for role in self.allowed_roles):
+    async def on_member_update(self, before, after):
+        if after.guild != self.guild:
+            return
+
+        welcome_roles = {name.strip() for name in settings.ALLOWED_ROLES.split(",")}
+        added_roles = set(after.roles) - set(before.roles)
+        if any(role.name in welcome_roles for role in added_roles):
             await self.welcome_channel.send(
                 embed=dbu.info_embed(
                     msg=(
-                        f"Hey {member.mention}, welcome to the server! I'm **Docksy**, here to help you get settled. "
+                        f"Hey {after.mention}, welcome to the server! I'm **Docksy**, here to help you get settled. "
                         "Take a look around, and say hi to everyone! "
                         "When you're ready, type `/docks docs` to check out some helpful info to get started."
                     ),

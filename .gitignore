@@ -1,3 +1,4 @@
+.env
 .env.development
 .env.production
 
@@ -7,6 +8,6 @@ util/osrs_api/*activities.py
 util/osrs_api/*skills.py
 util/osrs_api/*bosses.py
 logs/
-db/cache/
+db/db_cache/
 scratchpad*
 .venv

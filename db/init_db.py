@@ -2,7 +2,7 @@
 from pathlib import Path
 
 from .database import Database
-from .migrations import apply_migrations, execute_sql
+from .migrations.runner import apply_migrations, execute_sql
 from resources import SKILLS, BOSSES, ACTIVITIES
 
 

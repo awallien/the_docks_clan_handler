@@ -42,6 +42,7 @@ Running either script also generates the required OSRS metadata files:
 **Note**: For any database migration, stop all Docksy processes before applying changes, and then restart them afterward.
 Generally, these migrations should be perfomed during a planned maintenance window.
 See the [database migration guide](docs/database-migrations.md) for details.
+The [database schema reference](docs/database-schema.md) describes the tables and columns.
 
 ## Bot
 
