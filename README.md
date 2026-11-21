@@ -13,7 +13,14 @@ Install dependencies with:
 ```bash
 pip install -r requirements.txt
 ```
+
 ---
+
+## Configuration
+See `env.example` for the required environment variables.
+
+---
+
 
 ## Usage
 ### (Windows 10+ Based)
@@ -68,11 +75,6 @@ the last snapshot intact. It records refresh outcomes but does not update ranks.
 Only one scheduler can run for a database at a time. A second instance exits
 with an error; a separate SQLite lock file coordinates the processes without
 blocking the CLI or bot from using the database.
-
----
-
-## Configuration
-See `env.example` for the required environment variables.
 
 ---
 
