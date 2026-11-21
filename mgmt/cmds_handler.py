@@ -52,6 +52,18 @@ class CommandSpecsHandler:
         if rank not in ClanMemberRank.values() or rank == ClanMemberRank.RANK_INVALID:
             raise CommandSpecsArgsException(f"Invalid rank: {rank}")
 
+    def cmd_rank_updates(self, tokens: List[str], **args):
+        service = self._container.rank_update_service()
+        if tokens in ([], ["all"]):
+            return service.pending(include_acknowledged=bool(tokens)) or "No rank changes found."
+        if (tokens[0] == "report" and len(tokens) <= 2
+                and (len(tokens) == 1 or (tokens[1].isascii() and tokens[1].isdigit() and int(tokens[1]) > 0))):
+            report = service.get_report(int(tokens[1]) if len(tokens) == 2 else None)
+            if report is None:
+                raise CommandSpecsArgsException("Rank report not found")
+            return f"Rank report {report['id']} ({report['created_at']}):\n{report['content']}"
+        raise CommandSpecsArgsException("Usage: /rank_updates [all|report [id]]")
+
     def cmd_cm(self, tokens: List[str], **args):
         """Ex: /cm member=new_member joined_date=2021-01-01 rank=1"""
         payload = self._parse_kv_tokens(tokens)
@@ -119,7 +131,7 @@ class CommandSpecsHandler:
         result = []
         for member in members:
             row = dict(member)
-            for field in ("joined_date",):
+            for field in ("joined_date", "last_rank_update"):
                 if row[field] is not None:
                     row[field] = self._ordinal_to_dt(row[field])
             if selected["skill"]:

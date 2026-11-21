@@ -1,6 +1,6 @@
 import discord
 
-from discord_bot_util import EmbedUtil
+from discord_bot.discord_bot_util import EmbedUtil
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

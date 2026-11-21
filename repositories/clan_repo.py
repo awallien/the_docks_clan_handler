@@ -1,6 +1,7 @@
 from typing import NotRequired, TypedDict
 
 from db import Database
+from .hiscore_repo import utc_now
 
 class ClanUpdateValues(TypedDict, total=False):
     member: NotRequired[str]
@@ -54,6 +55,18 @@ class ClanRepository:
         
         assignments = ", ".join(f"{field} = ?" for field in values)
         params = tuple(values.values()) + (member, )
+        if "rank" in values or ("member" in values and values["member"] != member):
+            with self.db.connection() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                row = conn.execute("SELECT id, rank FROM clan WHERE member = ?", (member,)).fetchone()
+                result = conn.execute(f"UPDATE clan SET {assignments} WHERE member = ?", params)
+                if row is not None and "member" in values and values["member"] != member:
+                    conn.execute("DELETE FROM hiscore_refresh WHERE clan_id = ?", (row["id"],))
+                if row is not None and "rank" in values and values["rank"] != row["rank"]:
+                    conn.execute("UPDATE clan SET last_rank_update = NULL WHERE id = ?", (row["id"],))
+                    conn.execute("UPDATE rank_changes SET superseded_at = ? WHERE clan_id = ? AND acknowledged_at IS NULL AND superseded_at IS NULL", (utc_now(), row["id"]))
+                conn.commit()
+                return result.rowcount
         result = self.db.execute(
             f"UPDATE clan SET {assignments} where MEMBER = ?",
             params,

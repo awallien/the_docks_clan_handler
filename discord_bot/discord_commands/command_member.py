@@ -78,15 +78,18 @@ async def _clan_stats_member(bot: "TheDocksDiscordBot",
 
     rank = clan_stats.get("rank") or "Unknown"
     joined_date = _format_ordinal(clan_stats.get("joined_date"))
+    rank_date = _format_ordinal(clan_stats.get("last_rank_update"))
 
     embed.set_thumbnail(url=RankUtil.get_rank_icon_url(rank))
     (
         embed.add_field(name="Rank", value=rank, inline=True)
+        .add_field(name="Last Rank Date", value=rank_date, inline=True)
         .add_field(name="Joined Date", value=joined_date, inline=True)
     )
 
     if kwargs.get("verbose"):
-        detail_stats = RankUtil.get_skill_stats(member, rank, clan_stats.get("joined_date"))
+        hiscore = bot.container.rank_update_service().get_snapshot(clan_stats["id"])
+        detail_stats = RankUtil.get_skill_stats(hiscore, rank, clan_stats.get("joined_date"))
         embed.add_field(name="\"Hidden\" Stats", value=detail_stats, inline=False)
 
     await interaction.edit_original_response(embed=embed)

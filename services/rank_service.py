@@ -1,9 +1,24 @@
 
 from datetime import date
+from dataclasses import dataclass
 from typing import Dict, List
 
 from util.osrs_api import Hiscore, SKILLS as osrs_api_SKILLS, Skill
 from entity import ClanMemberRank
+
+
+@dataclass(frozen=True)
+class RankSkillStats:
+    max_melee: Skill | None
+    melee_level: int
+    ranged_level: int
+    magic_level: int
+    combat_average: float
+    non_combat_skills: List[Skill]
+    non_combat_levels: List[int]
+    non_combat_average: float
+    all_non_combat: bool
+    next_rank: str
     
 class RankService:
 
@@ -52,17 +67,21 @@ class RankService:
         hiscore: Hiscore | None,
     ) -> ClanMemberRank:
         """Return the highest achievement rank currently qualified for."""
-        if any(
-            (skill := hiscore.skills.get(name)) is None
-            or skill.level is None or skill.xp is None
-            or skill.level < 0 or skill.xp < 0
-            for name in osrs_api_SKILLS
+        available = {}
+        for name in osrs_api_SKILLS:
+            skill = hiscore.skills.get(name)
+            if (skill is not None and skill.level is not None and skill.xp is not None
+                    and skill.level >= 0 and skill.xp >= 0):
+                available[name] = skill
+
+        if len(available) == len(osrs_api_SKILLS) and all(
+            skill.level >= 99 for skill in available.values()
         ):
-            return ClanMemberRank.RANK_5
+            return ClanMemberRank.RANK_15
 
         combat_avg = cls.get_combat_avg(hiscore)
-        non_combat_avg = cls.get_non_combat_avg(hiscore)
 
+        non_combat_avg = cls.get_non_combat_avg(hiscore)
         highest_avg = max(combat_avg, non_combat_avg)
 
         # Ranks 5-11 are based on either combat or non-combat average.
@@ -81,13 +100,7 @@ class RankService:
                 return rank
 
         # All remaining achievement ranks require 99s.
-        if all(hiscore.skills.get(name).level >= 99 for name in osrs_api_SKILLS):
-            return ClanMemberRank.RANK_15
-
-        if combat_avg >= 99 and cls.get_non_combat_avg(
-            hiscore,
-            n_highest=6,
-        ) >= 99:
+        if combat_avg >= 99 and cls.get_non_combat_avg(hiscore, n_highest=6) >= 99:
             return ClanMemberRank.RANK_14
 
         if combat_avg >= 99 and non_combat_avg >= 99:
@@ -117,21 +130,23 @@ class RankService:
         Return the combat average using:
         max(attack, strength, defence), ranged, magic.
         """
+        _, melee, ranged, magic = cls._combat_levels(hiscore)
+        return int(cls._get_avg(melee, ranged, magic))
+
+    @classmethod
+    def _combat_levels(cls, hiscore: Hiscore):
         skills = cls.get_combat_skills(hiscore)
 
-        strongest_melee = cls.get_max_skills(
-            skills["attack"],
-            skills["strength"],
-            skills["defence"],
-        )
+        def valid(skill):
+            return (skill is not None and skill.level is not None and skill.xp is not None
+                    and skill.level >= 0 and skill.xp >= 0)
 
-        return int(
-            cls._get_avg(
-                strongest_melee.level,
-                skills["ranged"].level,
-                skills["magic"].level,
-            )
-        )
+        melee = [skills[name] for name in ("attack", "strength", "defence") if valid(skills[name])]
+        strongest_melee = cls.get_max_skills(*melee) if melee else None
+        ranged = skills["ranged"].level if valid(skills["ranged"]) else 0
+        magic = skills["magic"].level if valid(skills["magic"]) else 0
+
+        return strongest_melee, strongest_melee.level if strongest_melee else 0, ranged, magic
 
     @classmethod
     def get_non_combat_skills(
@@ -140,12 +155,11 @@ class RankService:
         n_highest: int = 3,
     ) -> List[Skill]:
         """Return the highest-XP non-combat skills."""
-        skills = [
-            hiscore.skills.get(skill_name)
-            for skill_name in cls.NON_COMBAT_SKILLS
-        ]
-
-        return cls.get_max_skills(*skills, n_highest=n_highest)
+        if not 1 <= n_highest <= len(cls.NON_COMBAT_SKILLS):
+            raise ValueError("Invalid number of non-combat skills")
+        skills = [skill for name in cls.NON_COMBAT_SKILLS
+                  if (skill := hiscore.skills.get(name)) is not None]
+        return sorted(skills, key=lambda skill: skill.xp if skill.xp is not None else -1, reverse=True)[:n_highest]
 
     @classmethod
     def get_non_combat_avg(
@@ -154,12 +168,33 @@ class RankService:
         n_highest: int = 3,
     ) -> int:
         """Return the average level of the highest non-combat skills."""
-        skills = cls.get_non_combat_skills(
-            hiscore,
-            n_highest=n_highest,
-        )
+        _, _, average = cls._non_combat_details(hiscore, n_highest)
+        return int(average)
 
-        return int(cls._get_avg(*(skill.level for skill in skills)))
+    @classmethod
+    def _non_combat_details(cls, hiscore: Hiscore, n_highest: int):
+        skills = cls.get_non_combat_skills(hiscore, n_highest=n_highest)
+        levels = [max(skill.level, 0) if skill.level is not None else 0 for skill in skills]
+        return skills, levels, sum(levels) / n_highest
+
+    @classmethod
+    def get_skill_stats(cls, hiscore: Hiscore, current_rank: ClanMemberRank, joined_date: int) -> RankSkillStats:
+        """Return rank calculation details for presentation by a client."""
+        next_rank = cls.get_next_rank(hiscore, current_rank, joined_date)
+        max_melee, melee, ranged, magic = cls._combat_levels(hiscore)
+        n_highest = 3
+        if next_rank == ClanMemberRank.RANK_14:
+            n_highest = 6
+        elif next_rank == ClanMemberRank.RANK_15:
+            n_highest = len(cls.NON_COMBAT_SKILLS)
+        skills, levels, non_combat_average = cls._non_combat_details(hiscore, n_highest)
+        return RankSkillStats(
+            max_melee=max_melee, melee_level=melee, ranged_level=ranged,
+            magic_level=magic, combat_average=cls._get_avg(melee, ranged, magic),
+            non_combat_skills=skills, non_combat_levels=levels,
+            non_combat_average=non_combat_average,
+            all_non_combat=n_highest > 6, next_rank=next_rank,
+        )
 
     @staticmethod
     def get_max_skills(

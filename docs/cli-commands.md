@@ -40,7 +40,31 @@ exist, only matching members are shown; if none match, the command reports an
 error.
 
 The displayed metrics are stored values refreshed by the scheduler. Unranked
-hiscore values are skipped, leaving any previously stored values unchanged.
+values show as unavailable. `last_rank_update` is the date a rank change was
+acknowledged through the bot.
+
+## View pending rank changes: `/rank_updates`
+
+```text
+/rank_updates
+/rank_updates all
+/rank_updates report
+/rank_updates report <id>
+```
+
+The first command shows unacknowledged changes; `all` also includes acknowledged
+and superseded history. Staff with the configured Discord admin role can run `/docks rank_updates`
+to calculate and report proposed changes; its optional
+`ack` argument defaults to `false`. When set to `true`, it acknowledges
+previously pending entries after the response is delivered; newly calculated
+changes remain pending. Acknowledge changes after applying them in-game.
+The member's current rank and acknowledgement date change only when a pending
+proposal is acknowledged.
+Viewing this CLI report does not change ranks or acknowledge entries.
+
+`/rank_updates report` displays the latest full bot report, including skipped members;
+use `/rank_updates report <id>` to retrieve an earlier report. Reports remain available
+even if Discord delivery failed or the rank changes were later acknowledged.
 
 ## Update a member: `/um`
 

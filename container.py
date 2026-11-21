@@ -1,5 +1,6 @@
 from db import Database
 from repositories.hiscore_repo import HiscoreRepository
+from services.rank_update_service import RankUpdateService
 
 from repositories import (
     ClanRepository,
@@ -100,6 +101,9 @@ class Container:
             "rank_service",
             lambda: RankService()
         )
+
+    def rank_update_service(self) -> RankUpdateService:
+        return self._get("rank_update_service", lambda: RankUpdateService(self.db, self.rank_service()))
 
     # -------------------
     # Internal helper

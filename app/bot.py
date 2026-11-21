@@ -56,7 +56,10 @@ class TheDocksDiscordBot(commands.Bot):
         self.guild: discord.Guild = _discord_get_or_fail(self.guilds, settings.DISCORD_GUILD)
         
         self.mod: discord.Member = _discord_get_or_fail(self.guild.members, settings.BOT_OWNER)
-        self.allowed_role: discord.Role = _discord_get_or_fail(self.guild.roles, settings.ALLOWED_ROLE)
+        self.allowed_roles: list[discord.Role] = [
+            role for name in settings.general_command_roles
+            if (role := _discord_get_or_fail(self.guild.roles, name)) is not None
+        ]
         
         self.drops_webhook: str = settings.DROPS_WEBHOOK
         self.drops_channel: discord.TextChannel = _discord_get_or_fail(self.guild.channels, settings.DROPS_CHANNEL)
@@ -89,7 +92,7 @@ class TheDocksDiscordBot(commands.Bot):
                 raise ClientException(f"Bot owner {self.mod} is not found!")
             
     async def on_member_join(self, member):
-        if self.allowed_role in member.roles:
+        if any(role in member.roles for role in self.allowed_roles):
             await self.welcome_channel.send(
                 embed=dbu.info_embed(
                     msg=(
@@ -104,7 +107,8 @@ class TheDocksDiscordBot(commands.Bot):
     async def on_command_error(self, ctx, exception):
         print(f"Exception({ctx.author.name},{type(exception)}:{exception})")
         if isinstance(exception, commands.MissingAnyRole):
-            message = await ctx.reply(embed=dbu.info_embed(f"Sorry, you must be a {self.allowed_role} in order to use my commands. " 
+            roles = ", ".join(role.name for role in self.allowed_roles)
+            message = await ctx.reply(embed=dbu.info_embed(f"Sorry, you need one of these roles to use my commands: {roles}. "
                                       f"If you are a member, please reach out to {self.mod.display_name} to provide you the role.",
                                       title="Well... this is awkward."))
             await message.add_reaction("🤣")

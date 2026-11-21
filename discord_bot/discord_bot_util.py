@@ -1,12 +1,8 @@
 import json
 import os
-from dataclasses import dataclass
-from typing import List
-
 from discord import Embed, Color
 from entity import ClanMemberRank
 from services import rank_service
-from util import Skill, Hiscore
 from resources import RANK_ICONS_JSON_PATH
 
 skills_initials = {
@@ -36,16 +32,6 @@ skills_initials = {
 	"sailing": "sal",
 }
 
-
-@dataclass
-class RankSkillStats:
-    max_melee: Skill
-    ranged_lvl: int
-    magic_lvl: int
-    cmb_avg: float
-    max_non_cmb_skills: List[Skill]
-    non_cmb_avg: float
-    next_rank: str
 
 class RankUtil:
     _rank_to_icon = dict()
@@ -77,43 +63,22 @@ class RankUtil:
         return cls._rank_to_icon[rank]
     
     @classmethod
-    def get_skill_stats(cls, member: str, rank: ClanMemberRank, joined_date: int) -> str:
+    def get_skill_stats(cls, hiscore, rank: ClanMemberRank, joined_date: int) -> str:
         """Get skill stats - next rank, cmb avg, non-cmb avg"""
-        try:
-            hiscore = Hiscore(member)
-            skills = hiscore.skills
-        except Exception:
-            hiscore = None
-        
-        next_rank = rank_service.get_next_rank(hiscore, rank, joined_date)
-        next_rank_str = f"* **Next Rank**: {next_rank}"
-
         if not hiscore:
-            return "\n".join([
-                "**Hiscore data unavailable. Using default rank.**",
-                next_rank_str
-            ])
+            return "**No successful current hiscore refresh is available.**"
+        stats = rank_service.get_skill_stats(hiscore, rank, joined_date)
+        next_rank_str = f"* **Next Rank**: {stats.next_rank}"
+        melee_name = stats.max_melee.name.capitalize() if stats.max_melee else "Melee"
+        cmb_avg_str = (f"* **Cmb. Avg. ({melee_name}/Ranged/Magic)**: "
+                       f"{stats.melee_level}/{stats.ranged_level}/{stats.magic_level} -> {stats.combat_average:.2f}")
 
-        max_melee = rank_service.get_max_skills(
-            skills.attack, skills.strength, skills.defence
-        )
-        ranged_lvl = skills.ranged.level
-        magic_lvl = skills.magic.level
-        cmb_avg = (max_melee.level + ranged_lvl + magic_lvl) / 3
-        cmb_avg_str = f"* **Cmb. Avg. ({max_melee.name.capitalize()}/Ranged/Magic**: {max_melee.level}/{ranged_lvl}/{magic_lvl} ->  {cmb_avg:.2f})"
-
-        n_highest = 3
-        match next_rank:
-            case ClanMemberRank.RANK_14:    n_highest = 6
-            case ClanMemberRank.RANK_15:    n_highest = len(rank_service.NON_CMB_SKILLS)
-        max_non_cmb_skills = rank_service.get_non_cmb_skills(hiscore, n_highest=n_highest)
-        non_cmb_avg = sum([sk.level for sk in max_non_cmb_skills]) / n_highest
-        non_cmb_sk_lvls_str = "/".join(str(max(0,sk.level)) for sk in max_non_cmb_skills)
-        if n_highest > 6:
+        non_cmb_sk_lvls_str = "/".join(str(level) for level in stats.non_combat_levels)
+        if stats.all_non_combat:
             non_cmb_sk_names = "ALL"
         else:
-            non_cmb_sk_names = "/".join([skills_initials[sk.name].capitalize() for sk in max_non_cmb_skills])
-        non_cmb_avg_str = f"* **Non-Cmb. Avg. ({non_cmb_sk_names})**: {non_cmb_sk_lvls_str} -> {non_cmb_avg:.2f}"
+            non_cmb_sk_names = "/".join(skills_initials[sk.name].capitalize() for sk in stats.non_combat_skills)
+        non_cmb_avg_str = f"* **Non-Cmb. Avg. ({non_cmb_sk_names})**: {non_cmb_sk_lvls_str} -> {stats.non_combat_average:.2f}"
         
         return "\n".join([
             cmb_avg_str,

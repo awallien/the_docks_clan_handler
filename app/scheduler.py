@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import sqlite3
+from contextlib import contextmanager
 
 from container import Container
 from resources.hiscore_constants import ACTIVITIES, BOSSES, SKILLS
@@ -8,40 +10,61 @@ from util.osrs_api import Hiscore
 logger = logging.getLogger(__name__)
 
 
-def refresh_member(container: Container, member):
-    """Fetch and atomically store one member's ranked hiscore values."""
-    name = member["member"]
-    hiscore = Hiscore(name)
-    skills = {}
-    for metric in SKILLS:
-        value = hiscore.skills.get(metric)
-        if value.level < -1 or value.xp < -1:
-            raise ValueError(f"Invalid hiscore values for skill '{metric}'")
-        if value.level != -1 and value.xp != -1:
-            skills[metric] = (value.level, value.xp)
+class SchedulerAlreadyRunning(RuntimeError):
+    pass
 
-    def scores(names, collection):
-        result = {}
-        for metric in names:
-            score = collection.get(metric).score
-            if score < -1:
-                raise ValueError(f"Invalid hiscore score for '{metric}'")
-            if score != -1:
-                result[metric] = score
-        return result
 
-    def calculate_rank(current_rank, joined_date):
+@contextmanager
+def scheduler_lock(db_path):
+    """Hold a separate SQLite write lock for this database's scheduler."""
+    resolved_path = db_path.resolve()
+    lock_path = resolved_path.with_name(resolved_path.name + ".scheduler.lock")
+    conn = sqlite3.connect(lock_path, timeout=0)
+    try:
         try:
-            return container.rank_service().get_next_rank(hiscore, current_rank, joined_date)
-        except (TypeError, ValueError, OverflowError):
-            logger.exception("Cannot calculate rank for %s; keeping current rank", name)
-            return None
+            conn.execute("BEGIN IMMEDIATE")
+        except sqlite3.OperationalError as exc:
+            if getattr(exc, "sqlite_errorcode", 0) & 0xff in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
+                raise SchedulerAlreadyRunning(f"A scheduler is already running for {db_path}") from exc
+            raise
+        yield
+    finally:
+        conn.close()
 
-    saved = container.hiscore_repo().save_snapshot(
-        member["id"], name, skills,
-        scores(ACTIVITIES, hiscore.activities), scores(BOSSES, hiscore.bosses),
-        calculate_rank,
-    )
+
+def refresh_member(container: Container, member):
+    """Fetch and atomically store one member's hiscore snapshot."""
+    name = member["member"]
+    repo = container.hiscore_repo()
+    token = repo.begin_refresh(member["id"], name)
+    if token is None:
+        return False
+    try:
+        hiscore = Hiscore(name)
+        skills = {}
+        for metric in SKILLS:
+            value = hiscore.skills.get(metric)
+            if value.level < -1 or value.xp < -1:
+                raise ValueError(f"Invalid hiscore values for skill '{metric}'")
+            skills[metric] = None if value.level == -1 or value.xp == -1 else (value.level, value.xp)
+
+        def scores(names, collection):
+            result = {}
+            for metric in names:
+                score = collection.get(metric).score
+                if score < -1:
+                    raise ValueError(f"Invalid hiscore score for '{metric}'")
+                result[metric] = None if score == -1 else score
+            return result
+
+        saved = repo.save_snapshot(member["id"], name, token, skills,
+                                   scores(ACTIVITIES, hiscore.activities), scores(BOSSES, hiscore.bosses))
+    except Exception:
+        try:
+            repo.fail_refresh(member["id"], name, token)
+        except Exception:
+            logger.exception("Could not record failed hiscore refresh for %s", name)
+        raise
     if not saved:
         logger.info("Skipped %s: member was renamed or removed during refresh", name)
     return saved
@@ -65,7 +88,8 @@ async def refresh_members(container: Container):
 
 
 async def clan_db_schdeduler(container: Container, delay: int = 3600):
-    """Refresh hiscores and eligible ranks periodically."""
-    while True:
-        await refresh_members(container)
-        await asyncio.sleep(delay)
+    """Refresh hiscores periodically; rank changes are handled separately."""
+    with scheduler_lock(container.db.path):
+        while True:
+            await refresh_members(container)
+            await asyncio.sleep(delay)

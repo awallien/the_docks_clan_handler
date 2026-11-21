@@ -15,7 +15,8 @@ from rich.panel import Panel
 from rich.table import Table
 
 from container import Container
-from mgmt import COMMAND_HANDLERS, COMMAND_HELP, HELP_ROWS, CommandSpecsHandler
+from mgmt import (COMMANDS_BY_NAME, COMMAND_HELP, HELP_ROWS, CLI_WELCOME,
+                  COMMAND_PREFIX_WARNING, CommandSpecsHandler)
 
 class DocksClanCLICompleter(Completer):
     """Command completer that includes short descriptions in dropdown metadata."""
@@ -91,7 +92,7 @@ class DocksClanCLI:
 
         self._console.print(
             Panel.fit(
-                "[bold cyan]The Docks Clan CLI[/bold cyan]\nType [bold]/help[/bold] for commands. Type [bold]/exit[/bold] to quit.",
+                CLI_WELCOME,
                 border_style="cyan",
             )
         )
@@ -120,10 +121,6 @@ class DocksClanCLI:
                 continue
 
             self._interrupt_armed = False
-
-            if not raw.startswith("/") and raw not in {"exit", "quit", "help", "clear"}:
-                self._warn("Commands must start with '/'. Type /help for usage.")
-                continue
 
             if await self._dispatch(raw):
                 break
@@ -163,27 +160,34 @@ class DocksClanCLI:
         
         command = parts[0]
         args = parts[1:]
+        spec = COMMANDS_BY_NAME.get(command)
+        if not in_cmd_file and not raw.startswith("/") and (spec is None or args):
+            self._warn(COMMAND_PREFIX_WARNING)
+            return
 
-        if not args and command in {"/exit", "/quit", "exit", "quit"}:
-            return True
-        if not args and command in {"/help", "help"}:
-            self._print_help()
-        elif not args and command in {"/clear", "clear"}:
-            self._console.clear()
-        elif command == "/rf":
-            if in_cmd_file:
-                self._error(f"Invalid command: Recursive file reads not allowed")
+        if spec is not None and spec.control and (not spec.no_arguments or not args):
+            if in_cmd_file and not spec.allow_in_file:
+                self._error("Invalid command: Recursive file reads not allowed")
                 return
-            return await self._read_cmd_file(args)
-        else:
-            task = asyncio.create_task(asyncio.to_thread(self._handle_command, command, args))
-            try:
-                await asyncio.shield(task)
-            except asyncio.CancelledError:
-                if not task.done():
-                    self._warn("Waiting for the current command to finish before shutting down.")
-                await task
-                raise
+            return await getattr(self, spec.control)(args)
+
+        task = asyncio.create_task(asyncio.to_thread(self._handle_command, command, args))
+        try:
+            await asyncio.shield(task)
+        except asyncio.CancelledError:
+            if not task.done():
+                self._warn("Waiting for the current command to finish before shutting down.")
+            await task
+            raise
+
+    async def _control_help(self, args):
+        self._print_help()
+
+    async def _control_clear(self, args):
+        self._console.clear()
+
+    async def _control_exit(self, args):
+        return True
 
     async def _read_cmd_file(self, args: list[str]):
         """Read file of commands and dispatch them"""
@@ -218,15 +222,15 @@ class DocksClanCLI:
                 return True
 
     def _handle_command(self, command: str, args: list[str]):
-        handler_name = COMMAND_HANDLERS.get(command)
-        if handler_name is None:
+        spec = COMMANDS_BY_NAME.get(command)
+        if spec is None or spec.handler is None:
             self._error(f"Unknown command: {command}")
             return
         
-        handler = getattr(self._handler, handler_name)
+        handler = getattr(self._handler, spec.handler)
 
         try:
             resp = handler(args)
-            self._print_response(resp, table=(command == "/rm"))
+            self._print_response(resp, table=spec.table_output)
         except Exception as exc:
             self._error(f"Command failed: {exc}")

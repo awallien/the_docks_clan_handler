@@ -1,14 +1,11 @@
 # Docksy
 
 **Docksy** is a companion bot and CLI toolkit for managing The Docks clan, an OSRS clan community in game and on Discord.
-It has multiple features, including tracking clan members, surface OSRS hiscore data, sumamrize drops, manage server-facing commands, and automate routine clan workflows from both Discord slash commands and an interactive terminal.
-
 
 ---
-
 ## Requirements
 - Python 3.11+
-- SQLite 3.35+ when migrating an existing database that has `last_rank_date`
+- SQLite 3.35+ when migrating an existing database
 - [discord.py](https://discordpy.readthedocs.io/en/stable/)
 - Other dependencies listed in `requirements.txt`
 
@@ -16,54 +13,60 @@ Install dependencies with:
 ```bash
 pip install -r requirements.txt
 ```
-
 ---
 
 ## Usage
 ### (Windows 10+ Based)
-#### Running the CLI and Bot
+#### Running Docksy
 ```
 PS > .\run.ps1
 ```
 
 ### (Linux Based)
-#### Running the CLI and Bot
+#### Running Docksy
 ```
 $ ./run.sh
 ```
 
 By default, the CLI, bot, and scheduler run together. Use `./run.sh --bot` and
 `./run.sh --scheduler` to run the bot and scheduler independently, and
-`./run.sh --cli` for a separate administrative session. Flags can be combined;
-the same flags work with `run.ps1`. Run only one scheduler instance at a time.
-The scheduler refreshes stored hiscores for clan members on startup and
-then every hour. Unranked values are skipped, leaving any previously stored
-value unchanged. After a successful refresh it recalculates eligible clan ranks
-and marks changes as pending. Special, honorary, and administrative ranks are
-left unchanged. The `rank_update` flag remains set until a future reporting
-workflow clears it; the bot command to report and clear flags is not yet built.
+`./run.sh --cli` for a separate administrative session. Flags can be combined.
+The same flags work with `run.ps1`.
 
-See the [CLI command reference](docs/cli-commands.md) for all commands and
-examples.
+Running either script also generates the required OSRS metadata files:
 
-In the CLI, `/rm` displays member details in a table. Select stored metrics and
-optionally save the same rows to a new CSV file, for example:
-
-```text
-/rm "Player One" PlayerTwo skill=attack,magic boss="Abyssal Sire" activities="Clue Scrolls (all)" save=report.csv
-/rm "Player One" skill=all boss=all activities=all
-```
-
-Omit player names to show all members. Metric names come from
-`resources/hiscore_constants.py`; quote arguments containing spaces. Missing
-stored values display as `—` and are blank in CSV. Existing files are not
-overwritten. The `all` options can produce a very wide table; CSV may be easier
-to inspect.
-
-Note that running these scripts will also generate the needed OSRS metadata files:
 - `util/osrs_api/bosses.py`
 - `util/osrs_api/skills.py`
 - `util/osrs_api/activities.py`
+
+**Note**: For any database migration, stop all Docksy processes before applying changes, and then restart them afterward.
+Generally, these migrations should be perfomed during a planned maintenance window.
+See the [database migration guide](docs/database-migrations.md) for details.
+
+## Bot
+
+The Discord bot provides clan members with server guides, drop summaries, and
+other community tools. It also lets the bot owner review member requests and
+manage rank updates using stored hiscore data.
+
+See the [Discord command reference](docs/discord-commands.md) for details.
+
+## CLI
+
+The CLI provides an interactive terminal for administering clan members,
+viewing stored hiscores, exporting reports, and reviewing rank changes.
+
+See the [CLI command reference](docs/cli-commands.md) for details.
+
+## Scheduler
+
+The scheduler refreshes hiscores on startup and then waits one hour between
+cycles. Unranked values are shown as unavailable, and failed refreshes leave
+the last snapshot intact. It records refresh outcomes but does not update ranks.
+
+Only one scheduler can run for a database at a time. A second instance exits
+with an error; a separate SQLite lock file coordinates the processes without
+blocking the CLI or bot from using the database.
 
 ---
 

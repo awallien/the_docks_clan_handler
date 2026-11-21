@@ -1,10 +1,12 @@
 import argparse
 import asyncio
 import signal
+import sys
 
 from app import DocksClanCLI, clan_db_schdeduler
 from container import Container
 from db import Database, init_schema
+from app.scheduler import SchedulerAlreadyRunning
 
 
 async def run_cli(container):
@@ -76,3 +78,6 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         pass
+    except SchedulerAlreadyRunning as exc:
+        print(exc, file=sys.stderr)
+        sys.exit(1)

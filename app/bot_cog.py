@@ -11,7 +11,8 @@ from discord_bot import (
     discord_bot_command_drops,
     discord_bot_command_member,
     discord_bot_command_spin,
-    discord_bot_command_donate
+    discord_bot_command_donate,
+    discord_bot_command_rank_updates,
 )
 from .config import settings
 
@@ -24,13 +25,23 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
         self.bot = bot
         super().__init__()
 
+    @app_commands.command(name="rank_updates", description="Calculate and report clan rank changes.")
+    @app_commands.checks.has_role(settings.ADMIN_ROLE)
+    @app_commands.describe(
+        ack="Update the database after applying proposed ranks in-game",
+        report="Attach a text report of the rank updates",
+    )
+    async def rank_updates(self, interaction: Interaction, ack: bool = False, report: bool = False):
+        await discord_bot_command_rank_updates(self.bot, interaction, ack, report)
+
 
     async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
-        if isinstance(error, app_commands.MissingRole):
-            role = error.missing_role
+        if isinstance(error, (app_commands.MissingRole, app_commands.MissingAnyRole)):
+            role = (error.missing_role if isinstance(error, app_commands.MissingRole)
+                    else ", ".join(str(name) for name in error.missing_roles))
             await interaction.response.send_message(
                 embed = EmbedUtil.error_embed(
-                    f"You don't have the required role: **{role}** to use this command!",
+                    f"You need one of these roles to use this command: **{role}**.",
                     "Well... this is awkward."
                 ), 
                 ephemeral = True
@@ -49,13 +60,13 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
 
 
     @app_commands.command(name="docs", description="Shows guides, references, and useful docs for the server and clan.")
-    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    @app_commands.checks.has_any_role(*settings.general_command_roles)
     async def _docs(self, interaction: Interaction):
         await discord_bot_command_docs(self.bot, interaction)
 
 
     @app_commands.command(name="drops", description="Fetch a summary of players' drops from the drops channel.")
-    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    @app_commands.checks.has_any_role(*settings.general_command_roles)
     @app_commands.describe(
         historical_days="How many days back to collect drop data (default: 30).",
         member="Optional: Only show drops for a specific player."
@@ -76,7 +87,7 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
 
 
     @app_commands.command(name="spin", description="Let me decide what to pick!")
-    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    @app_commands.checks.has_any_role(*settings.general_command_roles)
     @app_commands.describe(
         options="2 or more options to put on the spinner, separated by semi-colons (Ex: opt1;opt2;opt3)",
         weights="Weights associated to each option (i.e. weight 5000 is 1/5000 chance of choosing this option), in range 1 to 1000000",
@@ -91,7 +102,7 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
 
     
     @app_commands.command(name="new_member", description="Let me know if a new member joined the clan!")
-    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    @app_commands.checks.has_any_role(*settings.general_command_roles)
     @app_commands.describe(
         member="RSN of new member"
     )
@@ -101,7 +112,7 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
         await discord_bot_command_member(self.bot, interaction, DiscordBotCommandMemberOptions.NEW, member)
 
     @app_commands.command(name="update_member", description="You updated something about youself in the game, and it needs my attention.")
-    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    @app_commands.checks.has_any_role(*settings.general_command_roles)
     @app_commands.describe(
         member="RSN of new member",
         name_change="I changed my RSN to..."
@@ -113,7 +124,7 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
         await discord_bot_command_member(self.bot, interaction, DiscordBotCommandMemberOptions.UPDATE, member, name_change=name_change)
 
     @app_commands.command(name="delete_member", description="I am sad to see you go! :(")
-    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    @app_commands.checks.has_any_role(*settings.general_command_roles)
     @app_commands.describe(
         member="RSN of member that left the clan"
     )
@@ -124,7 +135,7 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
 
     
     @app_commands.command(name="clan_stats", description="See your clan stats. I'll look away...")
-    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    @app_commands.checks.has_any_role(*settings.general_command_roles)
     @app_commands.describe(
         member="RSN of clan member",
         verbose="Show Hiscore details behind this rank"
@@ -136,7 +147,7 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
         await discord_bot_command_member(self.bot, interaction, DiscordBotCommandMemberOptions.CLAN_STATS, member, verbose=verbose)
 
     @app_commands.command(name="challenge", description="I see you are bored. Want a challenge?")
-    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    @app_commands.checks.has_any_role(*settings.general_command_roles)
     async def _challenge(self, interaction: Interaction):
         await discord_bot_command_challenge(self.bot, interaction)
 
@@ -144,6 +155,6 @@ class DocksGroupCog(commands.GroupCog, name="docks"):
     # get news of the week
     # donate
     @app_commands.command(name="donate", description="Donate for a good cause :)")
-    @app_commands.checks.has_role(settings.ALLOWED_ROLE)
+    @app_commands.checks.has_any_role(*settings.general_command_roles)
     async def _donate(self, interaction: Interaction, value: float):
         await discord_bot_command_donate(self.bot, interaction, value)

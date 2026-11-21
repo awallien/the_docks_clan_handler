@@ -44,6 +44,7 @@ class Hiscore:
         idx = 0
         content_fields = content.strip().split("\n")
         expected = 1 + len(SKILLS) + len(ACTIVITIES) + len(BOSSES)
+
         if len(content_fields) != expected:
             raise ValueError(f"Expected {expected} hiscore rows, received {len(content_fields)}")
         

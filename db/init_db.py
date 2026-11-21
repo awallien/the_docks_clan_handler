@@ -2,6 +2,7 @@
 from pathlib import Path
 
 from .database import Database
+from .migrations import apply_migrations, execute_sql
 from resources import SKILLS, BOSSES, ACTIVITIES
 
 
@@ -23,16 +24,13 @@ def init_schema(db: Database, schema_path: str = None):
     ]
 
     with db.connection() as conn:
-        # Create tables
-        conn.executescript(schema_sql)
-
-        # Acquire the write lock before checking so concurrent processes migrate only once.
+        # Serialize schema creation, migration checks, and seed writes.
         conn.execute("BEGIN IMMEDIATE")
-        columns = {row["name"] for row in conn.execute("PRAGMA table_info(clan)")}
-        if "rank_update" not in columns:
-            conn.execute("ALTER TABLE clan ADD COLUMN rank_update INTEGER NOT NULL DEFAULT 0 CHECK(rank_update IN (0, 1))")
-        if "last_rank_date" in columns:
-            conn.execute("ALTER TABLE clan DROP COLUMN last_rank_date")
+        new_database = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' LIMIT 1"
+        ).fetchone() is None
+        execute_sql(conn, schema_sql)
+        apply_migrations(conn, baseline=new_database)
 
         # Seed data safely
         for table, params in tables_and_params:

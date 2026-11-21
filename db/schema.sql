@@ -1,9 +1,39 @@
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    applied_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS clan (
     id INTEGER PRIMARY KEY,
     member TEXT NOT NULL UNIQUE,
     joined_date DATE,
     rank TEXT,
-    rank_update INTEGER NOT NULL DEFAULT 0 CHECK(rank_update IN (0, 1))
+    last_rank_update DATE
+);
+
+CREATE TABLE IF NOT EXISTS hiscore_refresh (
+    clan_id INTEGER PRIMARY KEY REFERENCES clan(id) ON DELETE CASCADE,
+    status TEXT NOT NULL CHECK(status IN ('pending', 'complete', 'incomplete', 'failed')),
+    attempted_at TEXT NOT NULL,
+    succeeded_at TEXT,
+    attempt_id TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS rank_changes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    clan_id INTEGER NOT NULL REFERENCES clan(id) ON DELETE CASCADE,
+    previous_rank TEXT,
+    new_rank TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    acknowledged_at TEXT,
+    superseded_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS rank_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    content TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS skills (
